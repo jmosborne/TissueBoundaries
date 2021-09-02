@@ -20,6 +20,7 @@
 
 #include "NodeBasedCellPopulation.hpp"
 #include "MeshBasedCellPopulation.hpp"
+#include "MeshBasedCellPopulationWithGhostNodes.hpp"
 #include "VertexBasedCellPopulation.hpp"
 
 #include "CellProliferativeTypesCountWriter.hpp"
@@ -149,7 +150,7 @@ public:
         simulator.SetDt(0.005);
         simulator.SetSamplingTimestepMultiple(200);
         simulator.SetEndTime(M_END_TIME); //50
-        simulator.SetOutputDirectory("GrowingSpheroid/Node/Default");
+        simulator.SetOutputDirectory("GrowingMonolayer/Node/Default");
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -184,10 +185,11 @@ public:
     void TestMeshBasedGrowingMonolayer()
     {
         /* 
-         * == No ghosts == 
+         * == Ghosts == 
          */
          // Create mesh
-        HoneycombMeshGenerator generator(2, 2);
+        unsigned thickness_of_ghost_layer = 10;
+        HoneycombMeshGenerator generator(2, 2, thickness_of_ghost_layer);
         MutableMesh<2,2>* p_mesh = generator.GetMesh();
 
         // Get location indices corresponding to real cells
@@ -198,7 +200,7 @@ public:
         GenerateCells(location_indices.size(),cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL);  //mature_volume = sqrt(3.0)/2.0
 
         // Create tissue
-        MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
         cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
@@ -208,7 +210,7 @@ public:
         simulator.SetDt(0.005);
         simulator.SetSamplingTimestepMultiple(200);
         simulator.SetEndTime(M_END_TIME); //50
-        simulator.SetOutputDirectory("GrowingSpheroid/Mesh/NoGhosts");
+        simulator.SetOutputDirectory("GrowingMonolayer/Mesh/Ghosts");
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -225,7 +227,7 @@ public:
         simulator.Solve();
 
         /*
-         * == Ghosts == 
+         * == No ghosts == 
          */
 
     }
@@ -261,7 +263,7 @@ public:
         simulator.SetDt(0.005);
         simulator.SetSamplingTimestepMultiple(200);
         simulator.SetEndTime(M_END_TIME); //50
-        simulator.SetOutputDirectory("GrowingSpheroid/Vertex/Jagged");
+        simulator.SetOutputDirectory("GrowingMonolayer/Vertex/Jagged");
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
