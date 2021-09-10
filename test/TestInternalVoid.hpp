@@ -13,6 +13,8 @@
 #include "HoneycombMeshGenerator.hpp"
 #include "PeriodicNodesOnlyMesh.hpp"
 #include "MutableMesh.hpp"
+#include "Toroidal2dMesh.hpp"
+#include "ToroidalHoneycombMeshGenerator.hpp"
 #include "ToroidalHoneycombVertexMeshGenerator.hpp"
 
 #include "CellsGenerator.hpp"
@@ -26,6 +28,7 @@
 #include "VertexBasedCellPopulation.hpp"
 
 #include "CellVolumesWriter.hpp"
+#include "VoronoiDataWriter.hpp"
 
 #include "OffLatticeSimulation.hpp"
 
@@ -45,10 +48,12 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 10; //25
-static const double M_END_TIME = 60; //50
+static const double M_END_STEADY_STATE = 1; //25
+static const double M_END_TIME = 2; //50
 static const double M_DOMAIN_WIDTH = 12;
 static const double M_DOMAIN_LENGTH = 12;
+static const double M_DOMAIN_SCALING = 0.8;
+
 
 class TestInternalVoid : public AbstractCellBasedWithTimingsTestSuite
 {
@@ -145,7 +150,7 @@ public:
      * Simulate an internal void using the
      * Overlapping Spheres model.
      */
-    void TestNodeBasedInternalVoid()
+    void noTestNodeBasedInternalVoid()
     {
         /* 
          * == Pre-void == 
@@ -153,7 +158,7 @@ public:
          // Create simple mesh
         HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, 0);
         TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
-        p_generating_mesh->Scale(0.8, 0.8);
+        p_generating_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
 
         double cut_off_length = 1.5; //this is the default
 
@@ -210,7 +215,7 @@ public:
         NodeBasedCellPopulation<2>* cell_population1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
 
         // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 8.0, 2.0, 8.0);
+        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 6.0, 2.0, 6.0);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
         p_simulator1->SetDt(0.005);
@@ -234,34 +239,36 @@ public:
      * Simulate internal voide using the
      * Voronoi Tesselation model.
      */
-    void TestMeshBasedInternalVoid()
+
+    /*
+    * == No ghosts == 
+    */
+    void TestMeshBasedNoGhostsInternalVoid()
     {
         // Create mesh
-        unsigned thickness_of_ghost_layer = 2;
-
-        HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, thickness_of_ghost_layer);
-        MutableMesh<2,2>* p_mesh = generator.GetMesh();
-        p_mesh->Scale(0.8, 0.8);
-
-        // Get location indices corresponding to real cells
-        std::vector<unsigned> location_indices = generator.GetCellLocationIndices();
+        ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
+        Toroidal2dMesh* p_mesh = generator.GetToroidalMesh();
 
         // Create cells
         std::vector<CellPtr> cells;
         MAKE_PTR(DifferentiatedCellProliferativeType, p_differentiated_type);
         CellsGenerator<NoCellCycleModel, 2> cells_generator;
-        cells_generator.GenerateBasicRandom(cells, location_indices.size(), p_differentiated_type);
+        cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumNodes(), p_differentiated_type);
 
         // Create tissue
-        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
+        MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.AddCellWriter<CellVolumesWriter>();
+
+        // Output Voroni for visualisation
+        cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.SetWriteVtkAsPoints(true);
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(200);
+        //simulator.SetSamplingTimestepMultiple(20);
         simulator.SetEndTime(M_END_STEADY_STATE);
-        simulator.SetOutputDirectory("InternalVoid/Mesh/Pre-void");
+        simulator.SetOutputDirectory("InternalVoid/Mesh/NoGhosts");
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -272,6 +279,7 @@ public:
         // Create a force law and pass it to the simulation
         MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
         p_linear_force->SetMeinekeSpringStiffness(50.0);
+        p_linear_force->SetCutOffLength(1.5);
         simulator.AddForce(p_linear_force);
 
         // Create boundary condition y > 0
@@ -310,20 +318,14 @@ public:
         // Save simulation in steady state
 		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
 
-        /*
-         * == No ghosts == 
-         */
-         // Load steady state
-        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/Pre-void",M_END_STEADY_STATE);
+        // Load steady state
+        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/NoGhosts",M_END_STEADY_STATE);
         MeshBasedCellPopulation<2>* cell_population1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
 
         // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 8.0, 2.0, 8.0);
+        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 6.0, 2.0, 6.0);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        p_simulator1->SetDt(0.005);
-        p_simulator1->SetOutputDirectory("InternalVoid/Mesh/NoGhosts");
-        p_simulator1->SetSamplingTimestepMultiple(200);
         p_simulator1->SetEndTime(M_END_TIME);
         p_simulator1->Solve();
 
@@ -342,7 +344,7 @@ public:
      * Simulation internal void using the
      * Cell Vertex model.
      */
-    void TestVertexBasedInternalVoid()
+    void noTestVertexBasedInternalVoid()
     {
         /* 
          * == Pre-void == 
@@ -350,7 +352,7 @@ public:
          // Create mesh
         ToroidalHoneycombVertexMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH);
         Toroidal2dVertexMesh* p_mesh = generator.GetToroidalMesh();
-        p_mesh->Scale(0.8, 0.8);
+        p_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
         p_mesh->SetHeight(10);
         p_mesh->SetWidth(10);
 
