@@ -40,6 +40,8 @@
 
 #include "PlaneBoundaryCondition.hpp"
 
+#include "GhostNodeRemovalModifier.hpp"
+
 #include "AbstractCellBasedWithTimingsTestSuite.hpp" 
 #include "PetscSetupAndFinalize.hpp"
 #include "Warnings.hpp"
@@ -347,10 +349,11 @@ public:
         cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumNodes(), p_differentiated_type);
 
         // Create tissue
-        double ghost_spring_stiffness = 1.0;
-        double ghost_spring_rest_length = 1.0;
+        double ghost_cell_spring_stiffness = 15.0; // Default
+        double ghost_ghost_spring_stiffness = 1.0;
+        double ghost_spring_rest_length = 1.0; // Default
          
-        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, ghost_spring_stiffness, ghost_spring_rest_length);
+        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, ghost_cell_spring_stiffness, ghost_ghost_spring_stiffness, ghost_spring_rest_length);
         cell_population.AddCellWriter<CellVolumesWriter>();
 
         // Output Voroni for visualisation
@@ -367,8 +370,12 @@ public:
         simulator.SetOutputCellVelocities(true);
 
         // Add volume tracking Modifier
-        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
-        simulator.AddSimulationModifier(p_modifier);
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier_1);
+        simulator.AddSimulationModifier(p_modifier_1);
+
+        // Add volume tracking Modifier
+        MAKE_PTR(GhostNodeRemovalModifier<2>, p_modifier_2);
+        simulator.AddSimulationModifier(p_modifier_2);        
 
         // Create a force law and pass it to the simulation
         MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
