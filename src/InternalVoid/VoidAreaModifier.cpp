@@ -97,7 +97,9 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
         double void_area = 0.0;
 
         // both NodeBased and MeshBased (with no ghosts) populations are treated the same here, as both just have a cutoff radius
-        if( bool(dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation)) || bool(dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation)) )
+        if( (bool(dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation)) 
+        || bool(dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation)))
+        && !(bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))) )
         {
             double pixel_radial_reach = 0.5*mCutoff;
             double separation_between_pixels = 0.05;
@@ -146,7 +148,8 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
         // }
         
         // We handle Vertex model a little differently as there is a very natural cell area defined
-        if(bool(dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation)))
+        if(bool(dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation)) 
+        || bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation)))
         {
             double tissue_area = 0.0;
 

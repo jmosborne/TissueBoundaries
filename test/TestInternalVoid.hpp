@@ -54,7 +54,7 @@
  */
 
 static const double M_END_STEADY_STATE = 1;
-static const double M_END_TIME = 2;
+static const double M_END_TIME = 1.2;
 static const double M_DT_TIME = 0.001;
 static const double M_SAMPLE_TIME = 10;
 
@@ -354,7 +354,7 @@ public:
 
         // Track the area of the void
         MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
-        voidarea_modifier1->SetOutputDirectory("InternalVoid/Mesh/NoGhosts/WithVoid");
+        voidarea_modifier1->SetOutputDirectory("InternalVoid/Mesh/NoGhosts/Void");
         p_simulator1->AddSimulationModifier(voidarea_modifier1);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
