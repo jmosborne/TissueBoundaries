@@ -48,11 +48,17 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 1; //25
-static const double M_END_TIME = 2; //50
+static const double M_END_STEADY_STATE = 0.1; //25
+static const double M_END_TIME = 1; //50
 static const double M_DOMAIN_WIDTH = 12;
-static const double M_DOMAIN_LENGTH = 12;
+static const double M_DOMAIN_LENGTH = 15;
 static const double M_DOMAIN_SCALING = 0.8;
+
+static const double M_HOLEWIDTH = 2.0;
+static const double M_HOLE_X_MIN = 2.0;
+static const double M_HOLE_X_MAX = 8.0;
+static const double M_HOLE_Y_MIN = 2.0;
+static const double M_HOLE_Y_MAX = 8.0;
 
 
 class TestInternalVoid : public AbstractCellBasedWithTimingsTestSuite
@@ -93,53 +99,78 @@ private:
     * killing those cells whose centres are located in a given region.
     * 
     * @param rCellPopulation a cell population
-    * @param holeWidth the width of the hole
-    * @param xMin the left boundary of the hole
-    * @param xMax the right boundary of the hole
-    * @param yMin the bottom boundary of the hole
-    * @param yMax the top boundary of the hole
     */
-    void CreateHoleInCellPopulation(AbstractCellPopulation<2>& rCellPopulation,
-                                    double holeWidth,
-                                    double xMin,
-                                    double xMax,
-                                    double yMin,
-                                    double yMax)
+    void CreateHoleInCellPopulation(AbstractCellPopulation<2>& rCellPopulation)
     {
-        for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
-                cell_iter != rCellPopulation.End();
-                ++cell_iter)
+        if (bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation)))
         {
-            // Get the coordinates of this cell centre
-            c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
-            double x = centre_of_cell[0];
-            double y = centre_of_cell[1];
+            std::set<unsigned> location_indices;
+            std::set<unsigned> ghost_node_indices;
 
-            if ((fabs(y-x)<holeWidth) && (x>xMin) && (x<xMax) && (y>yMin) && (y<yMax))
+            for (std::list<CellPtr>::iterator cell_iter = rCellPopulation.rGetCells().begin();
+                cell_iter != rCellPopulation.rGetCells().end();)
             {
-                cell_iter->Kill();
+                // Get the coordinates of this cell centre
+                c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
+                double x = centre_of_cell[0];
+                double y = centre_of_cell[1];
+                unsigned location_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
+ 
+                if ((fabs(y-x)<M_HOLEWIDTH) && (x>M_HOLE_X_MIN) && (x<M_HOLE_X_MAX) && (y>M_HOLE_Y_MIN) && (y<M_HOLE_Y_MAX))
+                {   
+                    // Delete cell and store it as a ghost node
+                    rCellPopulation.RemoveCellUsingLocationIndex(location_index, (*cell_iter));
+                    // Update vector of cells
+                    cell_iter = rCellPopulation.rGetCells().erase(cell_iter);
+ 
+                    // Change to chost node            
+                    ghost_node_indices.insert(location_index);
+                }
+                else
+                {
+                    ++cell_iter;
+                }
+            }
+            dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>* >(&rCellPopulation)->SetGhostNodes(ghost_node_indices);
+            //dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>* >(&rCellPopulation)->RemoveDeadCells();
+            //dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>* >(&rCellPopulation)->Update();
+        }
+        else
+        {
+            for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
+                    cell_iter != rCellPopulation.End();
+                    ++cell_iter)
+            {
+                // Get the coordinates of this cell centre
+                c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
+                double x = centre_of_cell[0];
+                double y = centre_of_cell[1];
+
+                if ((fabs(y-x)<M_HOLEWIDTH) && (x>M_HOLE_X_MIN) && (x<M_HOLE_X_MAX) && (y>M_HOLE_Y_MIN) && (y<M_HOLE_Y_MAX))
+                {   
+                    cell_iter->Kill();
+                }
+            }
+            
+            /* Need to remove the deleted cells and call update note this is usually
+            * performed in the Solve() method of the simulation class.
+            */
+            if (bool(dynamic_cast<NodeBasedCellPopulation<2>*>(&rCellPopulation)))
+            {
+                dynamic_cast<NodeBasedCellPopulation<2>* >(&rCellPopulation)->RemoveDeadCells();
+                dynamic_cast<NodeBasedCellPopulation<2>* >(&rCellPopulation)->Update();
+            }
+            else if (bool(dynamic_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation)))
+            {
+                dynamic_cast<MeshBasedCellPopulation<2>* >(&rCellPopulation)->RemoveDeadCells();
+                dynamic_cast<MeshBasedCellPopulation<2>* >(&rCellPopulation)->Update();
+            }
+            else if (bool(dynamic_cast<VertexBasedCellPopulation<2>*>(&rCellPopulation)))
+            {
+                dynamic_cast<VertexBasedCellPopulation<2>* >(&rCellPopulation)->RemoveDeadCells();
+                dynamic_cast<VertexBasedCellPopulation<2>* >(&rCellPopulation)->Update();
             }
         }
-
-        /* Need to remove the deleted cells and call update note this is usually
-        * performed in the Solve() method of the simulation class.
-        */
-        if (bool(dynamic_cast<NodeBasedCellPopulation<2>*>(&rCellPopulation)))
-        {
-            dynamic_cast<NodeBasedCellPopulation<2>* >(&rCellPopulation)->RemoveDeadCells();
-            dynamic_cast<NodeBasedCellPopulation<2>* >(&rCellPopulation)->Update();
-        }
-        else if (bool(dynamic_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation)))
-        {
-            dynamic_cast<MeshBasedCellPopulation<2>* >(&rCellPopulation)->RemoveDeadCells();
-            dynamic_cast<MeshBasedCellPopulation<2>* >(&rCellPopulation)->Update();
-        }
-        else if (bool(dynamic_cast<VertexBasedCellPopulation<2>*>(&rCellPopulation)))
-        {
-            dynamic_cast<VertexBasedCellPopulation<2>* >(&rCellPopulation)->RemoveDeadCells();
-            dynamic_cast<VertexBasedCellPopulation<2>* >(&rCellPopulation)->Update();
-        }
-        
     }
 
 public:
@@ -215,7 +246,7 @@ public:
         NodeBasedCellPopulation<2>* cell_population1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
 
         // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 6.0, 2.0, 6.0);
+        CreateHoleInCellPopulation(*cell_population1);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
         p_simulator1->SetDt(0.005);
@@ -243,7 +274,7 @@ public:
     /*
     * == No ghosts == 
     */
-    void TestMeshBasedNoGhostsInternalVoid()
+    void noTestMeshBasedNoGhostsInternalVoid()
     {
         // Create mesh
         ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
@@ -282,36 +313,6 @@ public:
         p_linear_force->SetCutOffLength(1.5);
         simulator.AddForce(p_linear_force);
 
-        // Create boundary condition y > 0
-        c_vector<double, 2> point1 = zero_vector<double>(2);
-        c_vector<double, 2> normal1 = zero_vector<double>(2);
-        normal1(1) = -1.0;
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_condition1, (&cell_population, point1, normal1));
-
-        // Create boundary condition x > 0
-        c_vector<double, 2> point2 = zero_vector<double>(2);
-        c_vector<double, 2> normal2 = zero_vector<double>(2);
-        normal2(0) = -1.0;
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_condition2, (&cell_population, point2, normal2));
-
-        // Create boundary condition y < 10
-        c_vector<double, 2> point3 = zero_vector<double>(2);
-        point3(1) = 10.0;
-        normal1(1) = 1.0;
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_condition3, (&cell_population, point3, normal1));
-
-        // Create boundary condition x < 10
-        c_vector<double, 2> point4 = zero_vector<double>(2);
-        point4(0) = 10.0;
-        normal2(0) = 1.0;
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_condition4, (&cell_population, point4, normal2));
-
-        // Pass the boundary conditions to the simulation
-        simulator.AddCellPopulationBoundaryCondition(p_condition1);
-        simulator.AddCellPopulationBoundaryCondition(p_condition2);
-        simulator.AddCellPopulationBoundaryCondition(p_condition3);
-        simulator.AddCellPopulationBoundaryCondition(p_condition4);
-
         // Run simulation
         simulator.Solve();
 
@@ -323,7 +324,7 @@ public:
         MeshBasedCellPopulation<2>* cell_population1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
 
         // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 6.0, 2.0, 6.0);
+        CreateHoleInCellPopulation(*cell_population1);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
         p_simulator1->SetEndTime(M_END_TIME);
@@ -331,11 +332,69 @@ public:
 
         // Tidy up
         delete p_simulator1;
+    }
 
-        /*
-         * == Ghosts ==
-         */
+    void TestMeshBasedGhostsInternalVoid()
+    {
+        // Create mesh
+        ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
+        Toroidal2dMesh* p_mesh = generator.GetToroidalMesh();
 
+        // Create cells
+        std::vector<CellPtr> cells;
+        MAKE_PTR(DifferentiatedCellProliferativeType, p_differentiated_type);
+        CellsGenerator<NoCellCycleModel, 2> cells_generator;
+        cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumNodes(), p_differentiated_type);
+
+        // Create tissue
+        double ghost_spring_stiffness = 1.0;
+        double ghost_spring_rest_length = 1.0;
+         
+        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, ghost_spring_stiffness, ghost_spring_rest_length);
+        cell_population.AddCellWriter<CellVolumesWriter>();
+
+        // Output Voroni for visualisation
+        cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.SetWriteVtkAsPoints(true);
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(0.005);
+        //simulator.SetSamplingTimestepMultiple(20);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory("InternalVoid/Mesh/Ghosts");
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        // Add volume tracking Modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        p_linear_force->SetCutOffLength(1.5);
+        simulator.AddForce(p_linear_force);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Save simulation in steady state
+		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
+
+        // Load steady state
+        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/Ghosts",M_END_STEADY_STATE);
+        MeshBasedCellPopulationWithGhostNodes<2>* cell_population1 = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&(p_simulator1->rGetCellPopulation()));
+
+        // Now remove cells in a given region using a helper method
+        CreateHoleInCellPopulation(*cell_population1);
+
+        // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+        p_simulator1->SetEndTime(M_END_TIME);
+        p_simulator1->Solve();
+
+        // Tidy up
+        delete p_simulator1;
     }
 
     /* 
@@ -409,7 +468,7 @@ public:
         VertexBasedCellPopulation<2>* cell_population1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
 
         // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1, 1.75, 2.0, 8.0, 2.0, 8.0);
+        CreateHoleInCellPopulation(*cell_population1);
         SmoothVertexMeshEdges(*cell_population1);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
@@ -429,7 +488,7 @@ public:
         OffLatticeSimulation<2>* p_simulator2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Vertex/Pre-void",M_END_STEADY_STATE);
         VertexBasedCellPopulation<2>* cell_population2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator2->rGetCellPopulation()));
         // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population2, 1.75, 2.0, 8.0, 2.0, 8.0);
+        CreateHoleInCellPopulation(*cell_population2);
 
         // Reset timestep, sampling timestep and end time for simulation and run for a further duration
         p_simulator2->SetDt(0.005);
