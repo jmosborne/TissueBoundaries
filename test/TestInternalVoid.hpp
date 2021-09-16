@@ -54,7 +54,7 @@
  */
 
 static const double M_END_STEADY_STATE = 1;
-static const double M_END_TIME = 1.2;
+static const double M_END_TIME = 2;
 static const double M_DT_TIME = 0.001;
 static const double M_SAMPLE_TIME = 10;
 
