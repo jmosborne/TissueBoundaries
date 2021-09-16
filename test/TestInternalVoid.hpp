@@ -243,27 +243,31 @@ public:
         /*
          * == Void default cut-off == 
          */
-        // Load steady state
-        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Node/Pre-void",M_END_STEADY_STATE);
-        NodeBasedCellPopulation<2>* cell_population1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Node/Pre-void",M_END_STEADY_STATE);
+            NodeBasedCellPopulation<2>* p_cell_population_1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-        // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
 
-        // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        p_simulator1->SetDt(0.005);
-        p_simulator1->SetSamplingTimestepMultiple(200);
-        p_simulator1->SetEndTime(M_END_TIME);
-        p_simulator1->SetOutputDirectory("InternalVoid/Node/DefaultCutOff");
-        p_simulator1->Solve();
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_1->SetDt(0.005);
+            p_simulator_1->SetSamplingTimestepMultiple(200);
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->SetOutputDirectory("InternalVoid/Node/DefaultCutOff");
+            p_simulator_1->Solve();
 
-        // Tidy up
-        delete p_simulator1;
+            // Tidy up
+            delete p_simulator_1;
+        }
 
         /*
          * == Larger cut-off ==
          */
+        {
 
+        }
     }
 
     /* 
@@ -276,7 +280,7 @@ public:
     /*
     * == No ghosts == 
     */
-    void noTestMeshBasedNoGhostsInternalVoid()
+    void TestMeshBasedNoGhostsInternalVoid()
     {
         // Create mesh
         ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
@@ -299,7 +303,7 @@ public:
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetDt(0.005);
-        //simulator.SetSamplingTimestepMultiple(20);
+        simulator.SetSamplingTimestepMultiple(20);
         simulator.SetEndTime(M_END_STEADY_STATE);
         simulator.SetOutputDirectory("InternalVoid/Mesh/NoGhosts");
         simulator.SetOutputDivisionLocations(true);
@@ -312,7 +316,7 @@ public:
         // Create a force law and pass it to the simulation
         MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
         p_linear_force->SetMeinekeSpringStiffness(50.0);
-        p_linear_force->SetCutOffLength(1.5);
+        p_linear_force->SetCutOffLength(1.0);
         simulator.AddForce(p_linear_force);
 
         // Run simulation
@@ -321,22 +325,51 @@ public:
         // Save simulation in steady state
 		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
 
-        // Load steady state
-        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/NoGhosts",M_END_STEADY_STATE);
-        MeshBasedCellPopulation<2>* cell_population1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
+        /*
+         * == No ghosts Infinite VT == 
+         */
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/NoGhosts",M_END_STEADY_STATE);
+            MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-        // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
 
-        // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        p_simulator1->SetEndTime(M_END_TIME);
-        p_simulator1->Solve();
+            // Reset end time for simulation and run for a further duration
+            p_simulator_1->SetOutputDirectory("InternalVoid/Mesh/NoGhostsInfiniteVT");
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->Solve();
 
-        // Tidy up
-        delete p_simulator1;
+            // Tidy up
+            delete p_simulator_1;
+        }
+
+        /*
+         * == No ghosts Finite VT == 
+         */
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/NoGhosts",M_END_STEADY_STATE);
+            MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
+
+            // Bound the VT
+            //p_cell_population_1->SetBoundVoronoiTessellation(true);
+
+            // Reset end time for simulation and run for a further duration
+            p_simulator_1->SetOutputDirectory("InternalVoid/Mesh/NoGhostsFiniteVT");
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->Solve();
+
+            // Tidy up
+            delete p_simulator_1;
+        }
     }
 
-    void TestMeshBasedGhostsInternalVoid()
+    void noTestMeshBasedGhostsInternalVoid()
     {
         // Create mesh
         ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
@@ -389,20 +422,27 @@ public:
         // Save simulation in steady state
 		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
 
-        // Load steady state
-        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/Ghosts",M_END_STEADY_STATE);
-        MeshBasedCellPopulationWithGhostNodes<2>* cell_population1 = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&(p_simulator1->rGetCellPopulation()));
+         /*
+          * == Remove Ghosts ==
+          *
+          */ 
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Mesh/Ghosts",M_END_STEADY_STATE);
+            MeshBasedCellPopulationWithGhostNodes<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-        // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
 
-        // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        p_simulator1->SetEndTime(M_END_TIME);
-        p_simulator1->Solve();
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->Solve();
 
-        // Tidy up
-        delete p_simulator1;
+            // Tidy up
+            delete p_simulator_1;
+        }
     }
+
 
     /* 
      * == VM ==
@@ -470,46 +510,52 @@ public:
         /*
          * == Smooth void == 
          */
-         // Load steady state
-        OffLatticeSimulation<2>* p_simulator1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Vertex/Pre-void",M_END_STEADY_STATE);
-        VertexBasedCellPopulation<2>* cell_population1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator1->rGetCellPopulation()));
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Vertex/Pre-void",M_END_STEADY_STATE);
+            VertexBasedCellPopulation<2>* p_cell_population_1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-        // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population1);
-        SmoothVertexMeshEdges(*cell_population1);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
+            SmoothVertexMeshEdges(*p_cell_population_1);
 
-        // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        p_simulator1->SetDt(0.005);
-        p_simulator1->SetSamplingTimestepMultiple(200);
-        p_simulator1->SetEndTime(M_END_TIME);
-        p_simulator1->SetOutputDirectory("InternalVoid/Vertex/Smooth");
-        p_simulator1->Solve();
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_1->SetDt(0.005);
+            p_simulator_1->SetSamplingTimestepMultiple(200);
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->SetOutputDirectory("InternalVoid/Vertex/Smooth");
+            p_simulator_1->Solve();
 
-        // Tidy up
-        delete p_simulator1;
+            // Tidy up
+            delete p_simulator_1;
+        }
 
         /*
          * == Jagged void ==
          */
          // Load steady state
-        OffLatticeSimulation<2>* p_simulator2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Vertex/Pre-void",M_END_STEADY_STATE);
-        VertexBasedCellPopulation<2>* cell_population2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator2->rGetCellPopulation()));
-        // Now remove cells in a given region using a helper method
-        CreateHoleInCellPopulation(*cell_population2);
+        {
+            OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Vertex/Pre-void",M_END_STEADY_STATE);
+            VertexBasedCellPopulation<2>* p_cell_population_2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_2);
 
-        // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        p_simulator2->SetDt(0.005);
-        p_simulator2->SetSamplingTimestepMultiple(200);
-        p_simulator2->SetEndTime(M_END_TIME);
-        p_simulator2->SetOutputDirectory("InternalVoid/Vertex/Jagged");
-        p_simulator2->Solve();
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_2->SetDt(0.005);
+            p_simulator_2->SetSamplingTimestepMultiple(200);
+            p_simulator_2->SetEndTime(M_END_TIME);
+            p_simulator_2->SetOutputDirectory("InternalVoid/Vertex/Jagged");
+            p_simulator_2->Solve();
 
-        // Tidy up
-        delete p_simulator2;
-
+            // Tidy up
+            delete p_simulator_2;
+        }
         /*
          * == Curved edges ==
          */
+        {
+            // TODO
+        }
 
     }
 };
