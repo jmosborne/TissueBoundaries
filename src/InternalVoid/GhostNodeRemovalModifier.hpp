@@ -62,7 +62,10 @@ class GhostNodeRemovalModifier : public AbstractCellBasedSimulationModifier<DIM,
     void serialize(Archive & archive, const unsigned int version)
     {
         archive & boost::serialization::base_object<AbstractCellBasedSimulationModifier<DIM,DIM> >(*this);
+        archive & mVolumeThreshold;
     }
+
+    double mVolumeThreshold;
 
 public:
 
@@ -75,6 +78,8 @@ public:
      * Destructor.
      */
     virtual ~GhostNodeRemovalModifier();
+
+    virtual void SetVolumeThreshold(double volumeThreshold);
 
     /**
      * Overridden UpdateAtEndOfTimeStep() method.
