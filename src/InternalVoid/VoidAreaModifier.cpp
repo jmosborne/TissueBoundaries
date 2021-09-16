@@ -51,7 +51,8 @@ template<unsigned DIM>
 VoidAreaModifier<DIM>::VoidAreaModifier()
     : AbstractCellBasedSimulationModifier<DIM>(),
     mOutputDirectory(""),
-    mCutoff(1.5)
+    mCutoff(1.5),
+    mPixelSeparation(0.05)
 {
 }
 
@@ -72,6 +73,12 @@ template<unsigned DIM>
 void VoidAreaModifier<DIM>::SetCutoff(double cutoff)
 {
 	mCutoff = cutoff;
+}
+
+template<unsigned DIM>
+void VoidAreaModifier<DIM>::SetPixelSeparation(double pixelSeparation)
+{
+	mPixelSeparation = pixelSeparation;
 }
 
 // std::string MeshModifier::GetOutputDirectory()
@@ -102,7 +109,7 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
         && !(bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))) )
         {
             double pixel_radial_reach = 0.5*mCutoff;
-            double separation_between_pixels = 0.05;
+            double separation_between_pixels = mPixelSeparation;
             double area_of_pixel = pow(separation_between_pixels,2);
 
             // minus 2 is to ensure we are in the tissue and not detecting gaps due to periodicity from each side

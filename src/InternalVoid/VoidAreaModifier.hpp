@@ -64,11 +64,13 @@ class VoidAreaModifier : public AbstractCellBasedSimulationModifier<DIM,DIM>
         archive & boost::serialization::base_object<AbstractCellBasedSimulationModifier<DIM,DIM> >(*this);
         archive & mOutputDirectory;
         archive & mCutoff;
+        archive & mPixelSeparation;
 
     } 
 
     std::string mOutputDirectory;
     double mCutoff;
+    double mPixelSeparation;
 
 
 public:
@@ -89,6 +91,7 @@ public:
 
     virtual void SetCutoff(double cutoff);
 
+    virtual void SetPixelSeparation(double pixelSeparation);
 
 
 
