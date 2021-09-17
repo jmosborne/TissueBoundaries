@@ -26,6 +26,7 @@
 #include "CellProliferativeTypesCountWriter.hpp"
 #include "CellIdWriter.hpp"
 #include "CellVolumesWriter.hpp"
+#include "CellAncestorWriter.hpp"
 
 #include "OffLatticeSimulation.hpp"
 
@@ -44,10 +45,15 @@
  */
 
 static const double M_END_TIME = 100; //100
-static const double M_DT_TIME = 0.001;
-static const double M_SAMPLE_TIME = 100;
+static const double M_DT_TIME = 0.005;
+static const double M_SAMPLE_TIME = 10;
 
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
+static const double M_EXPECTED_CELL_DURATION = 12.0;
+
+
+static const double M_INITIAL_WIDTH = 3;
+static const double M_INITIAL_LENGTH = 3;
 
 static const std::string M_HEAD_FOLDER = "GrowingMonolayer";
 
@@ -92,7 +98,7 @@ private:
 
     void GenerateCells(unsigned num_cells, std::vector<CellPtr>& rCells, double equilibriumVolume, double quiescentVolumeFraction)
     {
-        double typical_cell_cycle_duration = 12.0;
+        double typical_cell_cycle_duration = M_EXPECTED_CELL_DURATION;
 
         boost::shared_ptr<AbstractCellProperty> p_state(CellPropertyRegistry::Instance()->Get<WildTypeCellMutationState>());
         boost::shared_ptr<AbstractCellProperty> p_cell_type(CellPropertyRegistry::Instance()->Get<TransitCellProliferativeType>());
@@ -125,7 +131,7 @@ public:
      * Simulate a growing monolayer using the
      * Overlapping Spheres model.
      */
-    void TestNodeBasedGrowingMonolayer()
+    void xTestNodeBasedGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/Default";
 
@@ -133,7 +139,7 @@ public:
          * == Default cut-off ==
          */
          // Create a simple mesh
-        HoneycombMeshGenerator generator(2, 2);
+        HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
         TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
 
         double cut_off_length = 1.5; //this is the default
@@ -151,6 +157,7 @@ public:
         cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -171,6 +178,9 @@ public:
         p_linear_force->SetCutOffLength(cut_off_length);
         simulator.AddForce(p_linear_force);
 
+        // Mark Ancestors
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
         // Run simulation
         simulator.Solve();
 
@@ -189,7 +199,7 @@ public:
      * Simulate a growing monolayer using the
      * Voronoi Tessellation model.
      */
-    void TestMeshBasedGrowingMonolayer()
+    void xTestMeshBasedGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/Ghosts";
 
@@ -198,7 +208,7 @@ public:
          */
          // Create mesh
         unsigned thickness_of_ghost_layer = 10;
-        HoneycombMeshGenerator generator(2, 2, thickness_of_ghost_layer);
+        HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH, thickness_of_ghost_layer);
         MutableMesh<2,2>* p_mesh = generator.GetMesh();
 
         // Get location indices corresponding to real cells
@@ -213,6 +223,7 @@ public:
         cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -232,12 +243,62 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
 
+        // Mark Ancestors
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
         // Run simulation
         simulator.Solve();
 
-        /*
-         * == No ghosts == 
+    }
+
+    void TestMeshBasedNoGhostsGrowingMonolayer()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts";
+
+        /* 
+         * == No Ghosts == 
          */
+         // Create mesh
+        HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
+        MutableMesh<2,2>* p_mesh = generator.GetMesh();
+
+        // Get location indices corresponding to real cells
+        std::vector<unsigned> location_indices = generator.GetCellLocationIndices();
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(location_indices.size(),cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL);  //mature_volume = sqrt(3.0)/2.0
+
+        // Create tissue
+        MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_TIME); //50
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        simulator.AddForce(p_linear_force);
+
+        // Mark Ancestors
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        // Run simulation
+        simulator.Solve();
 
     }
 
@@ -247,7 +308,7 @@ public:
      * Simulate a growing monolayer using the
      * Cell Vertex model.
      */
-    void TestVertexBasedGrowingMonolayer() 
+    void xTestVertexBasedGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
 
@@ -255,7 +316,7 @@ public:
          * == Jagged edge == 
          */
         // Create cells
-        HoneycombVertexMeshGenerator mesh_generator(2, 2);
+        HoneycombVertexMeshGenerator mesh_generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
         MutableVertexMesh<2,2>* p_mesh = mesh_generator.GetMesh();
         // p_mesh->SetCellRearrangementThreshold(0.1);
 
@@ -268,6 +329,7 @@ public:
         cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
 
         // Create crypt simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -289,6 +351,9 @@ public:
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
         p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(10.0);
         simulator.AddForce(p_force);
+
+        // Mark Ancestors
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
         // Add target area modifier
         // MAKE_PTR(SimpleTargetAreaModifier<2>, p_growth_modifier);
