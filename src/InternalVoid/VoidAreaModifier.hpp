@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2021, University of Oxford.
+Copyright (c) 2005-2019, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -33,8 +33,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef GHOSTNODEREMOVALMODIFIER_HPP_
-#define GHOSTNODEREMOVALMODIFIER_HPP_
+#ifndef VoidAreaModifier_HPP_
+#define VoidAreaModifier_HPP_
 
 #include "ChasteSerialization.hpp"
 #include <boost/serialization/base_object.hpp>
@@ -42,12 +42,12 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "AbstractCellBasedSimulationModifier.hpp"
 
 /**
- * A modifier class in which the mean levels of Delta in neighbouring cells
- * are computed and stored in CellData. To be used in conjunction with Delta
- * Notch cell cycle models.
+ * A modifier class which at each simulation time step calculates the volume of each cell
+ * and stores it in in the CellData property as "volume". To be used in conjunction with
+ * contact inhibition cell cycle models.
  */
 template<unsigned DIM>
-class GhostNodeRemovalModifier : public AbstractCellBasedSimulationModifier<DIM,DIM>
+class VoidAreaModifier : public AbstractCellBasedSimulationModifier<DIM,DIM>
 {
     /** Needed for serialization. */
     friend class boost::serialization::access;
@@ -62,50 +62,59 @@ class GhostNodeRemovalModifier : public AbstractCellBasedSimulationModifier<DIM,
     void serialize(Archive & archive, const unsigned int version)
     {
         archive & boost::serialization::base_object<AbstractCellBasedSimulationModifier<DIM,DIM> >(*this);
-        archive & mVolumeThreshold;
-    }
+        archive & mOutputDirectory;
+        archive & mCutoff;
+        archive & mPixelSeparation;
 
-    double mVolumeThreshold;
+    } 
+
+    std::string mOutputDirectory;
+    double mCutoff;
+    double mPixelSeparation;
+
 
 public:
 
     /**
      * Default constructor.
      */
-    GhostNodeRemovalModifier();
+    VoidAreaModifier();
 
     /**
      * Destructor.
      */
-    virtual ~GhostNodeRemovalModifier();
+    virtual ~VoidAreaModifier();
 
-    virtual void SetVolumeThreshold(double volumeThreshold);
+    virtual void SetOutputDirectory(std::string outputDirectory);
+
+    // std::string GetOutputDirectory();
+
+    virtual void SetCutoff(double cutoff);
+
+    virtual void SetPixelSeparation(double pixelSeparation);
+
+
 
     /**
      * Overridden UpdateAtEndOfTimeStep() method.
      *
-     * Specifies what to do in the simulation at the end of each time step.
+     * Specify what to do in the simulation at the end of each time step.
      *
      * @param rCellPopulation reference to the cell population
      */
-    virtual void UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    virtual void UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM>& rCellPopulation);
+
+    virtual void UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<DIM>& rCellPopulation);
 
     /**
      * Overridden SetupSolve() method.
      *
-     * Specifies what to do in the simulation before the start of the time loop.
+     * Specify what to do in the simulation before the start of the time loop.
      *
      * @param rCellPopulation reference to the cell population
      * @param outputDirectory the output directory, relative to where Chaste output is stored
      */
-    virtual void SetupSolve(AbstractCellPopulation<DIM,DIM>& rCellPopulation, std::string outputDirectory);
-
-    /**
-     * Helper method to remove ghost nodes if too small or only connected to real cells
-     *
-     * @param rCellPopulation reference to the cell population
-     */
-    void UpdateGhostNodes(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    virtual void SetupSolve(AbstractCellPopulation<DIM>& rCellPopulation, std::string outputDirectory);
 
     /**
      * Overridden OutputSimulationModifierParameters() method.
@@ -117,6 +126,6 @@ public:
 };
 
 #include "SerializationExportWrapper.hpp"
-EXPORT_TEMPLATE_CLASS_SAME_DIMS(GhostNodeRemovalModifier)
+EXPORT_TEMPLATE_CLASS_SAME_DIMS(VoidAreaModifier)
 
-#endif /*GHOSTNODEREMOVALMODIFIER_HPP_*/
+#endif /*VoidAreaModifier_HPP_*/

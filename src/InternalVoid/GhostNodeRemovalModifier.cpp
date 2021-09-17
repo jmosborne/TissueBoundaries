@@ -38,13 +38,20 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 template<unsigned DIM>
 GhostNodeRemovalModifier<DIM>::GhostNodeRemovalModifier()
-    : AbstractCellBasedSimulationModifier<DIM>()
+    : AbstractCellBasedSimulationModifier<DIM>(),
+    mVolumeThreshold(0.4)
 {
 }
 
 template<unsigned DIM>
 GhostNodeRemovalModifier<DIM>::~GhostNodeRemovalModifier()
 {
+}
+
+template<unsigned DIM>
+void GhostNodeRemovalModifier<DIM>::SetVolumeThreshold(double volumeThreshold)
+{
+	mVolumeThreshold = volumeThreshold;
 }
 
 template<unsigned DIM>
@@ -80,7 +87,7 @@ void GhostNodeRemovalModifier<DIM>::UpdateGhostNodes(AbstractCellPopulation<DIM,
         {
             double element_volume = p_static_cast_cell_population->GetVoronoiTessellation()->GetVolumeOfElement(node_index);   
 
-            double threshold_element_volume = 0.4;
+            double threshold_element_volume = mVolumeThreshold;
 
             if (element_volume < threshold_element_volume)
             {

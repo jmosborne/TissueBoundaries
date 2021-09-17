@@ -41,20 +41,29 @@
 #include "PlaneBoundaryCondition.hpp"
 
 #include "GhostNodeRemovalModifier.hpp"
+#include "VoidAreaModifier.hpp"
+
 
 #include "AbstractCellBasedWithTimingsTestSuite.hpp" 
 #include "PetscSetupAndFinalize.hpp"
 #include "Warnings.hpp"
+#include "Debug.hpp"
 
 /*
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 0.1; //25
-static const double M_END_TIME = 1; //50
+static const double M_END_STEADY_STATE = 1;
+static const double M_END_TIME = 2;
+static const double M_DT_TIME = 0.001;
+static const double M_SAMPLE_TIME = 10;
+
+// Both Width and Length must be EVEN numbers here
 static const double M_DOMAIN_WIDTH = 12;
-static const double M_DOMAIN_LENGTH = 15;
+static const double M_DOMAIN_LENGTH = 14;
 static const double M_DOMAIN_SCALING = 0.8;
+static const double M_PERIODIC_WIDTH = 10.0;
+static const double M_PERIODIC_HEIGHT = 10.0;
 
 static const double M_HOLEWIDTH = 2.0;
 static const double M_HOLE_X_MIN = 2.0;
@@ -183,7 +192,7 @@ public:
      * Simulate an internal void using the
      * Overlapping Spheres model.
      */
-    void noTestNodeBasedInternalVoid()
+    void TestNodeBasedInternalVoid()
     {
         /* 
          * == Pre-void == 
@@ -197,8 +206,8 @@ public:
 
         // Convert this to a PeriodicNodesOnlyMesh
         c_vector<double,2> periodic_width = zero_vector<double>(2);
-        periodic_width[0] = 10.0;
-        periodic_width[1] = 10.0;
+        periodic_width[0] = M_PERIODIC_WIDTH;
+        periodic_width[1] = M_PERIODIC_HEIGHT;
         PeriodicNodesOnlyMesh<2>* p_mesh = new PeriodicNodesOnlyMesh<2>(periodic_width);
         p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 2.0);
 
@@ -214,8 +223,8 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
         simulator.SetOutputDirectory("InternalVoid/Node/Pre-void");
         simulator.SetOutputDivisionLocations(true);
@@ -230,6 +239,11 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         p_linear_force->SetCutOffLength(cut_off_length);
         simulator.AddForce(p_linear_force);
+
+        // Track the area of the void
+        MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
+        voidarea_modifier->SetOutputDirectory("InternalVoid/Node/Pre-Void");
+        simulator.AddSimulationModifier(voidarea_modifier);
 
         // Run simulation
         simulator.Solve();
@@ -250,7 +264,12 @@ public:
 
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
-
+       
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
+            voidarea_modifier1->SetOutputDirectory("InternalVoid/Node/DefaultCutOff");
+            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+        
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_1->SetDt(0.005);
             p_simulator_1->SetSamplingTimestepMultiple(200);
@@ -302,10 +321,10 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(20);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
-        simulator.SetOutputDirectory("InternalVoid/Mesh/NoGhosts");
+        simulator.SetOutputDirectory("InternalVoid/Mesh/NoGhosts/Pre-Void");
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -318,6 +337,11 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         p_linear_force->SetCutOffLength(1.0);
         simulator.AddForce(p_linear_force);
+
+        // Track the area of the void
+        MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
+        voidarea_modifier->SetOutputDirectory("InternalVoid/Mesh/NoGhosts/Pre-Void");
+        simulator.AddSimulationModifier(voidarea_modifier);
 
         // Run simulation
         simulator.Solve();
@@ -355,9 +379,15 @@ public:
 
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
-
+            
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
+            voidarea_modifier1->SetOutputDirectory("InternalVoid/Mesh/NoGhostsFiniteVT/Void");
+            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+            
             // Bound the VT
             //p_cell_population_1->SetBoundVoronoiTessellation(true);
+
 
             // Reset end time for simulation and run for a further duration
             p_simulator_1->SetOutputDirectory("InternalVoid/Mesh/NoGhostsFiniteVT");
@@ -369,6 +399,9 @@ public:
         }
     }
 
+    /*
+     * == Ghosts ==
+     */
     void noTestMeshBasedGhostsInternalVoid()
     {
         // Create mesh
@@ -395,10 +428,10 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        //simulator.SetSamplingTimestepMultiple(20);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
-        simulator.SetOutputDirectory("InternalVoid/Mesh/Ghosts");
+        simulator.SetOutputDirectory("InternalVoid/Mesh/Ghosts/Pre-Void");
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -416,11 +449,17 @@ public:
         p_linear_force->SetCutOffLength(1.5);
         simulator.AddForce(p_linear_force);
 
+        // Track the area of the void
+        MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
+        voidarea_modifier->SetOutputDirectory("InternalVoid/Mesh/Ghosts/Pre-Void");
+        simulator.AddSimulationModifier(voidarea_modifier);
+
         // Run simulation
         simulator.Solve();
 
         // Save simulation in steady state
 		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
+
 
          /*
           * == Remove Ghosts ==
@@ -434,7 +473,13 @@ public:
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
 
-            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
+            voidarea_modifier1->SetOutputDirectory("InternalVoid/Mesh/Ghosts/Void");
+            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+
+            // Reset timestep, end time for simulation and run for a further duration
             p_simulator_1->SetEndTime(M_END_TIME);
             p_simulator_1->Solve();
 
@@ -459,8 +504,8 @@ public:
         ToroidalHoneycombVertexMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH);
         Toroidal2dVertexMesh* p_mesh = generator.GetToroidalMesh();
         p_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
-        p_mesh->SetHeight(10);
-        p_mesh->SetWidth(10);
+        p_mesh->SetHeight(M_PERIODIC_HEIGHT);
+        p_mesh->SetWidth(M_PERIODIC_WIDTH);
 
         // Create cells
         std::vector<CellPtr> cells;
@@ -474,8 +519,8 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
         simulator.SetOutputDirectory("InternalVoid/Vertex/Pre-void");
         simulator.SetOutputDivisionLocations(true);
@@ -498,9 +543,14 @@ public:
         p_growth_modifier->SetGrowthDuration(0);
         simulator.AddSimulationModifier(p_growth_modifier);
         
+        // Track the area of the void
+        MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
+        voidarea_modifier->SetOutputDirectory("InternalVoid/Vertex/Pre-void");
+        simulator.AddSimulationModifier(voidarea_modifier);
+        
         // Smooth out edges to get nice box domain
         SmoothVertexMeshEdges(cell_population);
-
+        
         // Run simulation
         simulator.Solve();
 
@@ -519,6 +569,11 @@ public:
             CreateHoleInCellPopulation(*p_cell_population_1);
             SmoothVertexMeshEdges(*p_cell_population_1);
 
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
+            voidarea_modifier1->SetOutputDirectory("InternalVoid/Vertex/Smooth");
+            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_1->SetDt(0.005);
             p_simulator_1->SetSamplingTimestepMultiple(200);
@@ -534,11 +589,17 @@ public:
          * == Jagged void ==
          */
          // Load steady state
+
         {
             OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load("InternalVoid/Vertex/Pre-void",M_END_STEADY_STATE);
             VertexBasedCellPopulation<2>* p_cell_population_2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_2);
+
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier2);
+            voidarea_modifier2->SetOutputDirectory("InternalVoid/Vertex/Jagged");
+            p_simulator2->AddSimulationModifier(voidarea_modifier2);
 
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_2->SetDt(0.005);
@@ -550,6 +611,7 @@ public:
             // Tidy up
             delete p_simulator_2;
         }
+
         /*
          * == Curved edges ==
          */
