@@ -268,7 +268,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory("InternalVoid/Node/DefaultCutOff");
-            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_1->SetDt(0.005);
@@ -383,7 +383,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory("InternalVoid/Mesh/NoGhostsFiniteVT/Void");
-            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier1);
             
             // Bound the VT
             //p_cell_population_1->SetBoundVoronoiTessellation(true);
@@ -477,7 +477,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory("InternalVoid/Mesh/Ghosts/Void");
-            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier1);
 
             // Reset timestep, end time for simulation and run for a further duration
             p_simulator_1->SetEndTime(M_END_TIME);
@@ -572,7 +572,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory("InternalVoid/Vertex/Smooth");
-            p_simulator1->AddSimulationModifier(voidarea_modifier1);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier1);
 
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_1->SetDt(0.005);
@@ -599,7 +599,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier2);
             voidarea_modifier2->SetOutputDirectory("InternalVoid/Vertex/Jagged");
-            p_simulator2->AddSimulationModifier(voidarea_modifier2);
+            p_simulator_2->AddSimulationModifier(voidarea_modifier2);
 
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_2->SetDt(0.005);
