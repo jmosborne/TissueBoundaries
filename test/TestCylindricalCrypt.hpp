@@ -58,9 +58,14 @@
 
 static const double M_END_STEADY_STATE = 10; //100
 static const double M_END_TIME = 110; //1100
+static const double M_DT_TIME = 0.001;
+static const double M_SAMPLE_TIME = 100;
 static const double M_CRYPT_DIAMETER = 16;
 static const double M_CRYPT_LENGTH = 12;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
+
+static const std::string M_HEAD_FOLDER = "CylindricalCrypt";
+
 
 class TestCylindricalCrypt : public AbstractCellBasedWithTimingsTestSuite
 {
@@ -109,6 +114,8 @@ public:
      */
     void TestNodeBasedCrypt()
     {
+        std::string output_directory = M_HEAD_FOLDER + "/Node";
+
         // Create a simple mesh
         HoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0);
         TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
@@ -142,10 +149,10 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(1.0/200.0);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
-        simulator.SetOutputDirectory("CylindricalCrypt/Node");
+        simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -193,6 +200,8 @@ public:
      */
     void TestMeshBasedCrypt()
     {
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh";
+
         // Create mesh
         unsigned thickness_of_ghost_layer = 2;
 
@@ -220,10 +229,10 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(1.0/200.0);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
-        simulator.SetOutputDirectory("CylindricalCrypt/Mesh");
+        simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -267,6 +276,8 @@ public:
      */
     void TestVertexBasedCrypt()
     {
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex";
+
         // Create mesh
         CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, true);
         Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
@@ -289,10 +300,10 @@ public:
 
         // Create crypt simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(1.0/200.0);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_STEADY_STATE);
-        simulator.SetOutputDirectory("CylindricalCrypt/Vertex");
+        simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
         cell_population.AddCellWriter<CellAncestorWriter>();

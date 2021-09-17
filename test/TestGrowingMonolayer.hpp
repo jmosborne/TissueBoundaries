@@ -44,7 +44,12 @@
  */
 
 static const double M_END_TIME = 100; //100
+static const double M_DT_TIME = 0.001;
+static const double M_SAMPLE_TIME = 100;
+
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
+
+static const std::string M_HEAD_FOLDER = "GrowingMonolayer";
 
 class TestGrowingMonolayer : public AbstractCellBasedWithTimingsTestSuite
 {
@@ -122,6 +127,8 @@ public:
      */
     void TestNodeBasedGrowingMonolayer()
     {
+        std::string output_directory = M_HEAD_FOLDER + "/Node/Default";
+
         /* 
          * == Default cut-off ==
          */
@@ -147,10 +154,10 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_TIME); //50
-        simulator.SetOutputDirectory("GrowingMonolayer/Node/Default");
+        simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -184,6 +191,8 @@ public:
      */
     void TestMeshBasedGrowingMonolayer()
     {
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh/Ghosts";
+
         /* 
          * == Ghosts == 
          */
@@ -207,10 +216,10 @@ public:
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_TIME); //50
-        simulator.SetOutputDirectory("GrowingMonolayer/Mesh/Ghosts");
+        simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
@@ -240,6 +249,8 @@ public:
      */
     void TestVertexBasedGrowingMonolayer() 
     {
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
+
         /* 
          * == Jagged edge == 
          */
@@ -260,10 +271,10 @@ public:
 
         // Create crypt simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
-        simulator.SetDt(0.005);
-        simulator.SetSamplingTimestepMultiple(200);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
         simulator.SetEndTime(M_END_TIME); //50
-        simulator.SetOutputDirectory("GrowingMonolayer/Vertex/Jagged");
+        simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
 
