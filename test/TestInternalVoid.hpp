@@ -297,8 +297,8 @@ public:
      */
 
     /*
-    * == No ghosts == 
-    */
+     * == No ghosts == 
+     */
     void TestMeshBasedNoGhostsInternalVoid()
     {
         // Create mesh
@@ -402,7 +402,7 @@ public:
     /*
      * == Ghosts ==
      */
-    void noTestMeshBasedGhostsInternalVoid()
+    void TestMeshBasedGhostsInternalVoid()
     {
         // Create mesh
         ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
@@ -495,7 +495,7 @@ public:
      * Simulation internal void using the
      * Cell Vertex model.
      */
-    void noTestVertexBasedInternalVoid()
+    void TestVertexBasedInternalVoid()
     {
         /* 
          * == Pre-void == 
