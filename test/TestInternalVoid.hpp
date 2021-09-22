@@ -53,10 +53,10 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 1;
-static const double M_END_TIME = 2;
-static const double M_DT_TIME = 0.001;
-static const double M_SAMPLE_TIME = 100;
+static const double M_END_STEADY_STATE = 0.01;
+static const double M_END_TIME = 0.5;
+static const double M_DT_TIME = 0.005;
+static const double M_SAMPLE_TIME = 1;
 
 // Both Width and Length must be EVEN numbers here
 static const double M_DOMAIN_WIDTH = 12;
@@ -194,7 +194,7 @@ public:
      * Simulate an internal void using the
      * Overlapping Spheres model.
      */
-    void TestNodeBasedInternalVoid()
+    void NoTestNodeBasedInternalVoid()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/Pre-void";
         /* 
@@ -360,22 +360,22 @@ public:
          * == No ghosts Infinite VT == 
          */
         {
-            // Load steady state
-            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-            MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+            // // Load steady state
+            // OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            // MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-            std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
+            // std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
 
-            // Now remove cells in a given region using a helper method
-            CreateHoleInCellPopulation(*p_cell_population_1);
+            // // Now remove cells in a given region using a helper method
+            // CreateHoleInCellPopulation(*p_cell_population_1);
 
-            // Reset end time for simulation and run for a further duration
-            p_simulator_1->SetOutputDirectory(output_directory_1);
-            p_simulator_1->SetEndTime(M_END_TIME);
-            p_simulator_1->Solve();
+            // // Reset end time for simulation and run for a further duration
+            // p_simulator_1->SetOutputDirectory(output_directory_1);
+            // p_simulator_1->SetEndTime(M_END_TIME);
+            // p_simulator_1->Solve();
 
-            // Tidy up
-            delete p_simulator_1;
+            // // Tidy up
+            // delete p_simulator_1;
         }
 
         /*
@@ -397,7 +397,7 @@ public:
             p_simulator_2->AddSimulationModifier(voidarea_modifier_2);
             
             // Bound the VT
-            //p_cell_population_1->SetBoundVoronoiTessellation(true);
+            p_cell_population_2->SetBoundVoronoiTessellation(true);
 
 
             // Reset end time for simulation and run for a further duration
@@ -413,7 +413,7 @@ public:
     /*
      * == Ghosts ==
      */
-    void TestMeshBasedGhostsInternalVoid()
+    void NoTestMeshBasedGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/Ghosts/Pre-Void";
 
@@ -511,7 +511,7 @@ public:
      * Simulation internal void using the
      * Cell Vertex model.
      */
-    void TestVertexBasedInternalVoid()
+    void NoTestVertexBasedInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Vertex/Pre-void";
 
