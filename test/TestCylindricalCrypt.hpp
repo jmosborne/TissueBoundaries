@@ -16,7 +16,7 @@
 
 #include "CellsGenerator.hpp"
 
-#include "SimpleWntContactInhibitionCellCycleModel.hpp"
+#include "SimpleWntCellCycleModel.hpp"
 #include "WntConcentration.hpp"
 
 #include "MeshBasedCellPopulationWithGhostNodes.hpp"
@@ -28,6 +28,7 @@
 #include "CellIdWriter.hpp"
 #include "CellVolumesWriter.hpp"
 #include "CellAncestorWriter.hpp"
+#include "VoronoiDataWriter.hpp"
 
 #include "OffLatticeSimulation.hpp"
 #include "OnLatticeSimulation.hpp"
@@ -56,11 +57,11 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 10; //100
-static const double M_END_TIME = 110; //1100
-static const double M_DT_TIME = 0.001;
-static const double M_SAMPLE_TIME = 100;
-static const double M_CRYPT_DIAMETER = 16;
+static const double M_END_STEADY_STATE = 1; //100
+static const double M_END_TIME = 11; //1100
+static const double M_DT_TIME = 0.005;
+static const double M_SAMPLE_TIME = 20;
+static const double M_CRYPT_DIAMETER = 6; //16
 static const double M_CRYPT_LENGTH = 12;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
 
@@ -85,11 +86,11 @@ private:
 
         for (unsigned i=0; i<num_cells; i++)
         {
-            SimpleWntContactInhibitionCellCycleModel* p_model = new SimpleWntContactInhibitionCellCycleModel();
+            SimpleWntCellCycleModel* p_model = new SimpleWntCellCycleModel();
             p_model->SetDimension(2);
-            p_model->SetEquilibriumVolume(equilibriumVolume);
-            p_model->SetQuiescentVolumeFraction(quiescentVolumeFraction);
-            p_model->SetWntThreshold(0.5);
+            // p_model->SetEquilibriumVolume(equilibriumVolume);
+            // p_model->SetQuiescentVolumeFraction(quiescentVolumeFraction);
+            // p_model->SetWntThreshold(0.5);
 
 
             CellPtr p_cell(new Cell(p_state, p_model));
@@ -112,7 +113,7 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Overlapping Spheres model.
      */
-    void TestNodeBasedCrypt()
+    void NoTestNodeBasedCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node";
 
@@ -198,9 +199,149 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Voronoi Tesselation model.
      */
-    void TestMeshBasedCrypt()
+
+
+    /*
+     * == No ghosts Ininite VT == 
+     */
+    void TestMeshBasedNoGhostsCrypt()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Mesh";
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/";
+
+        // Create mesh (no ghosts)
+        CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH);
+        Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(p_mesh->GetNumNodes(),cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL);  //mature_volume = sqrt(3.0)/2.0
+
+        // Create tissue
+        MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        // Output Voroni for visualisation
+        cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.SetWriteVtkAsPoints(true);
+
+        // Create an instance of a Wnt concentration
+        WntConcentration<2>::Instance()->SetType(LINEAR);
+        WntConcentration<2>::Instance()->SetCellPopulation(cell_population);
+        WntConcentration<2>::Instance()->SetCryptLength(M_CRYPT_LENGTH);
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        // Add volume tracking Modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        simulator.AddForce(p_linear_force);
+
+        // Solid base boundary condition
+        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
+        p_bcs->SetUseJiggledNodesOnPlane(true);
+        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+
+        // Sloughing killer
+        MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+        simulator.AddCellKiller(p_killer);
+
+        simulator.Solve();
+
+        // Save simulation in initial condition
+		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);     
+
+        /*
+         * == No ghosts Infinite VT == 
+         */
+
+        std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";   
+        simulator.SetOutputDirectory(output_directory_1);
+
+
+        // Mark Ancestors
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        // Bound the VT
+        dynamic_cast<MeshBasedCellPopulation<2>*>(&(simulator.rGetCellPopulation()))->SetBoundVoronoiTessellation(true);
+
+        // Reset end time for simulation and run for a further duration
+        simulator.SetEndTime(M_END_TIME);
+        simulator.Solve();
+
+
+        {
+            // // Load steady state
+            // OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            // MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+
+            // std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
+
+            // // Run to Steady State
+            // p_simulator_1->SetOutputDirectory(output_directory_1);
+            // // p_simulator_1->Solve();
+
+            // // Mark Ancestors
+            // p_simulator_1->rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+            // // Reset end time for simulation and run for a further duration
+            // p_simulator_1->SetEndTime(M_END_TIME);
+            // p_simulator_1->Solve();
+
+            // // Tidy up
+            // delete p_simulator_1;
+            // delete p_cell_population_1;
+        }
+
+        /*
+         * == No ghosts Finite VT == 
+         */
+        // {
+        //     // Load steady state
+        //     OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+        //     MeshBasedCellPopulation<2>* p_cell_population_2 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
+
+        //     std::string output_directory_2 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/FiniteVT";
+            
+        //     // Bound the VT
+        //     p_cell_population_2->SetBoundVoronoiTessellation(true);
+
+        //     // Run to Steady State
+        //     p_simulator_2->SetOutputDirectory(output_directory_2);
+        //     p_simulator_2->Solve();
+
+        //     // Mark Ancestors
+        //     p_simulator_2->rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        //     // Reset end time for simulation and run for a further duration
+        //     p_simulator_2->SetEndTime(M_END_TIME);
+        //     p_simulator_2->Solve();
+
+        //     // Tidy up
+        //     delete p_simulator_2;
+        // }
+
+
+        // Clear singletons
+        WntConcentration<2>::Instance()->Destroy();
+    }
+
+    void noTestMeshBasedGhostsCrypt()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh/Ghosts";
 
         // Create mesh
         unsigned thickness_of_ghost_layer = 2;
@@ -222,6 +363,10 @@ public:
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        // Output Voroni for visualisation
+        cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.SetWriteVtkAsPoints(true);
+        
         // Create an instance of a Wnt concentration
         WntConcentration<2>::Instance()->SetType(LINEAR);
         WntConcentration<2>::Instance()->SetCellPopulation(cell_population);
@@ -274,7 +419,7 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Cell Vertex model.
      */
-    void TestVertexBasedCrypt()
+    void NoTestVertexBasedCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex";
 
