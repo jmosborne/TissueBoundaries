@@ -29,6 +29,7 @@
 
 #include "CellVolumesWriter.hpp"
 #include "VoronoiDataWriter.hpp"
+#include "BoundaryNodeWriter.hpp"
 
 #include "OffLatticeSimulation.hpp"
 
@@ -42,7 +43,7 @@
 
 #include "GhostNodeRemovalModifier.hpp"
 #include "VoidAreaModifier.hpp"
-
+#include "VertexBoundaryRefinementModifier.hpp"
 
 #include "AbstractCellBasedWithTimingsTestSuite.hpp" 
 #include "PetscSetupAndFinalize.hpp"
@@ -54,7 +55,7 @@
  */
 
 static const double M_END_STEADY_STATE = 0.01;
-static const double M_END_TIME = 0.5;
+static const double M_END_TIME = 2.0;
 static const double M_DT_TIME = 0.005;
 static const double M_SAMPLE_TIME = 1;
 
@@ -62,8 +63,8 @@ static const double M_SAMPLE_TIME = 1;
 static const double M_DOMAIN_WIDTH = 12;
 static const double M_DOMAIN_LENGTH = 14;
 static const double M_DOMAIN_SCALING = 0.8;
-static const double M_PERIODIC_WIDTH = 10.0;
-static const double M_PERIODIC_HEIGHT = 10.0;
+static const double M_PERIODIC_WIDTH = M_DOMAIN_WIDTH*M_DOMAIN_SCALING;
+static const double M_PERIODIC_HEIGHT = M_DOMAIN_LENGTH*0.5*sqrt(3)*M_DOMAIN_SCALING;
 
 static const double M_HOLEWIDTH = 2.0;
 static const double M_HOLE_X_MIN = 2.0;
@@ -104,7 +105,7 @@ private:
                 r_mesh.DeleteNodePriorToReMesh(node_index);
             }
         }
-            r_mesh.ReMesh();
+        r_mesh.ReMesh();
     }
 
     /**
@@ -304,7 +305,7 @@ public:
     /*
      * == No ghosts == 
      */
-    void TestMeshBasedNoGhostsInternalVoid()
+    void noTestMeshBasedNoGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/NoGhosts/Pre-Void";
 
@@ -439,6 +440,8 @@ public:
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
         cell_population.SetWriteVtkAsPoints(true);
 
+        cell_population.AddPopulationWriter<BoundaryNodeWriter>();
+
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetDt(M_DT_TIME);
@@ -511,7 +514,7 @@ public:
      * Simulation internal void using the
      * Cell Vertex model.
      */
-    void NoTestVertexBasedInternalVoid()
+    void TestVertexBasedInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Vertex/Pre-void";
 
@@ -575,49 +578,81 @@ public:
         // Save simulation in steady state
 		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
 
+        // /*
+        //  * == Smooth void == 
+        //  */
+        // {
+        //     // Load steady state
+        //     OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+        //     VertexBasedCellPopulation<2>* p_cell_population_1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+
+        //     std::string output_directory_1 =  M_HEAD_FOLDER + "/Vertex/Smooth";
+
+        //     // Now remove cells in a given region using a helper method
+        //     CreateHoleInCellPopulation(*p_cell_population_1);
+        //     SmoothVertexMeshEdges(*p_cell_population_1);
+
+        //     // Track the area of the void
+        //     MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_1);
+        //     voidarea_modifier_1->SetOutputDirectory(output_directory_1);
+        //     p_simulator_1->AddSimulationModifier(voidarea_modifier_1);
+
+        //     // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+        //     p_simulator_1->SetDt(M_DT_TIME);
+        //     p_simulator_1->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        //     p_simulator_1->SetEndTime(M_END_TIME);
+        //     p_simulator_1->SetOutputDirectory(output_directory_1);
+        //     p_simulator_1->Solve();
+
+        //     // Tidy up
+        //     delete p_simulator_1;
+        // }
+
+        // /*
+        //  * == Jagged void ==
+        //  */
+        //  // Load steady state
+
+        // {
+        //     OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+        //     VertexBasedCellPopulation<2>* p_cell_population_2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
+            
+        //     std::string output_directory_2 =  M_HEAD_FOLDER + "/Vertex/Jagged";
+
+        //     // Now remove cells in a given region using a helper method
+        //     CreateHoleInCellPopulation(*p_cell_population_2);
+
+        //     // Track the area of the void
+        //     MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_2);
+        //     voidarea_modifier_2->SetOutputDirectory(output_directory_2);
+        //     p_simulator_2->AddSimulationModifier(voidarea_modifier_2);
+
+        //     // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+        //     p_simulator_2->SetDt(M_DT_TIME);
+        //     p_simulator_2->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        //     p_simulator_2->SetEndTime(M_END_TIME);
+        //     p_simulator_2->SetOutputDirectory(output_directory_2);
+        //     p_simulator_2->Solve();
+
+        //     // Tidy up
+        //     delete p_simulator_2;
+        // }
+
         /*
-         * == Smooth void == 
+         * == Curved edges ==
          */
-        {
-            // Load steady state
-            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-            VertexBasedCellPopulation<2>* p_cell_population_1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
-
-            std::string output_directory_1 =  M_HEAD_FOLDER + "/Vertex/Smooth";
-
-            // Now remove cells in a given region using a helper method
-            CreateHoleInCellPopulation(*p_cell_population_1);
-            SmoothVertexMeshEdges(*p_cell_population_1);
-
-            // Track the area of the void
-            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_1);
-            voidarea_modifier_1->SetOutputDirectory(output_directory_1);
-            p_simulator_1->AddSimulationModifier(voidarea_modifier_1);
-
-            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-            p_simulator_1->SetDt(M_DT_TIME);
-            p_simulator_1->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
-            p_simulator_1->SetEndTime(M_END_TIME);
-            p_simulator_1->SetOutputDirectory(output_directory_1);
-            p_simulator_1->Solve();
-
-            // Tidy up
-            delete p_simulator_1;
-        }
-
-        /*
-         * == Jagged void ==
-         */
-         // Load steady state
-
         {
             OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
             VertexBasedCellPopulation<2>* p_cell_population_2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
             
-            std::string output_directory_2 =  M_HEAD_FOLDER + "/Vertex/Jagged";
+            std::string output_directory_2 =  M_HEAD_FOLDER + "/Vertex/Curved";
 
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_2);
+
+            // Refine the edges on boundary to get smooth edges
+            MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
+            p_simulator_2->AddSimulationModifier(refinement_modifier);
 
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_2);
@@ -633,13 +668,6 @@ public:
 
             // Tidy up
             delete p_simulator_2;
-        }
-
-        /*
-         * == Curved edges ==
-         */
-        {
-            // TODO
         }
 
     }
