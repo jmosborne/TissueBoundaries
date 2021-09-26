@@ -35,13 +35,12 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "VertexBoundaryRefinementModifier.hpp"
 #include "VertexBasedCellPopulation.hpp"
-#include "Debug.hpp"
 
 template<unsigned DIM>
 VertexBoundaryRefinementModifier<DIM>::VertexBoundaryRefinementModifier()
     : AbstractCellBasedSimulationModifier<DIM>(),
       mMaxEdgeLength(0.25),
-      mMinEdgeLength(0.025)
+      mMinEdgeLength(0.0)
 {
 }
 
@@ -68,9 +67,9 @@ void VertexBoundaryRefinementModifier<DIM>::SetupSolve(AbstractCellPopulation<DI
 template<unsigned DIM>
 void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
- if (dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation) == nullptr)
+    if (dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation) == nullptr)
     {
-        EXCEPTION("FarhadifarForce is to be used with a VertexBasedCellPopulation only");
+        EXCEPTION("VertexBoundaryRefinementModifier is to be used with a VertexBasedCellPopulation only");
     }
 
     // Define some helper variables
@@ -127,12 +126,10 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                             p_mesh->DivideEdge(p_node_a, p_node_b);
                             recheck_edges = true;
                         } 
-                        // else if (norm_2(edge) < mMinEdgeLength)
-                        // {
-                        //     p_mesh->PerformNodeMerge(p_node_a, p_node_b);
-                        //     p_mesh->RemoveDeletedNodes();
-                        //     recheck_edges = true;
-                        // }   
+                        else if (norm_2(edge) < mMinEdgeLength)
+                        {
+                            NEVER_REACHED; // Not implemented yet
+                        }   
                     }
                 }
             }
