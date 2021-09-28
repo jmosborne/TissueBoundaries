@@ -16,8 +16,7 @@
 
 #include "CellsGenerator.hpp"
 
-#include "SimpleWntCellCycleModel.hpp"
-#include "WntConcentration.hpp"
+#include "SimpleCellDataWntCellCycleModel.hpp"
 
 #include "MeshBasedCellPopulationWithGhostNodes.hpp"
 #include "NodeBasedCellPopulation.hpp"
@@ -42,6 +41,8 @@
 
 #include "SimpleTargetAreaModifier.hpp"
 #include "VolumeTrackingModifier.hpp"
+#include "WntConcentrationModifier.hpp"
+#include "VertexBoundaryRefinementModifier.hpp"
 
 #include "PlaneBasedCellKiller.hpp"
 
@@ -58,7 +59,7 @@
  */
 
 static const double M_END_STEADY_STATE = 1; //100
-static const double M_END_TIME = 11; //1100
+static const double M_END_TIME = 500; //1100
 static const double M_DT_TIME = 0.005;
 static const double M_SAMPLE_TIME = 20;
 static const double M_CRYPT_DIAMETER = 6; //16
@@ -86,7 +87,7 @@ private:
 
         for (unsigned i=0; i<num_cells; i++)
         {
-            SimpleWntCellCycleModel* p_model = new SimpleWntCellCycleModel();
+            SimpleCellDataWntCellCycleModel* p_model = new SimpleCellDataWntCellCycleModel();
             p_model->SetDimension(2);
             // p_model->SetEquilibriumVolume(equilibriumVolume);
             // p_model->SetQuiescentVolumeFraction(quiescentVolumeFraction);
@@ -143,10 +144,6 @@ public:
             cell_population.rGetMesh().GetNode(index)->SetRadius(0.5);
         }
 
-        // Create an instance of a Wnt concentration
-        WntConcentration<2>::Instance()->SetType(LINEAR);
-        WntConcentration<2>::Instance()->SetCellPopulation(cell_population);
-        WntConcentration<2>::Instance()->SetCryptLength(M_CRYPT_LENGTH);
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -156,6 +153,12 @@ public:
         simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
 
         // Add volume tracking modifier
         MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
@@ -188,9 +191,6 @@ public:
 
         // Clear memory
         delete p_mesh;
-
-        // Clear singletons
-        WntConcentration<2>::Instance()->Destroy();
     }
 
     /*
@@ -204,12 +204,12 @@ public:
     /*
      * == No ghosts Ininite VT == 
      */
-    void TestMeshBasedNoGhostsCrypt()
+    void noTestMeshBasedNoGhostsInfiniteVtCrypt() throw (Exception)
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/";
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/Infinite";
 
         // Create mesh (no ghosts)
-        CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH);
+        CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0); // No Ghosts
         Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
 
         // Create cells
@@ -227,10 +227,8 @@ public:
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
         cell_population.SetWriteVtkAsPoints(true);
 
-        // Create an instance of a Wnt concentration
-        WntConcentration<2>::Instance()->SetType(LINEAR);
-        WntConcentration<2>::Instance()->SetCellPopulation(cell_population);
-        WntConcentration<2>::Instance()->SetCryptLength(M_CRYPT_LENGTH);
+        // static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()))->SetBoundVoronoiTessellation(true);
+
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -240,6 +238,12 @@ public:
         simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
 
         // Add volume tracking Modifier
         MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
@@ -259,84 +263,90 @@ public:
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
         simulator.AddCellKiller(p_killer);
 
+        // Solve to Steady State
         simulator.Solve();
-
-        // Save simulation in initial condition
-		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);     
-
-        /*
-         * == No ghosts Infinite VT == 
-         */
-
-        std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";   
-        simulator.SetOutputDirectory(output_directory_1);
-
 
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
-        // Bound the VT
-        dynamic_cast<MeshBasedCellPopulation<2>*>(&(simulator.rGetCellPopulation()))->SetBoundVoronoiTessellation(true);
+        // Reset end time for simulation and run for a further duration
+        simulator.SetEndTime(M_END_TIME);
+
+        simulator.Solve();
+    }
+
+    /*
+     * == No ghosts Finite VT == 
+     */
+    void noTestMeshBasedNoGhostsFiniteVtCrypt() throw (Exception)
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/Finite";
+
+        // Create mesh (no ghosts)
+        CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0); // No Ghosts
+        Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(p_mesh->GetNumNodes(),cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL);  //mature_volume = sqrt(3.0)/2.0
+
+        // Create tissue
+        MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        // Output Voroni for visualisation
+        cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.SetWriteVtkAsPoints(true);
+
+        // Bound VT
+        cell_population.SetBoundVoronoiTessellation(true);
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
+
+        // Add volume tracking Modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        simulator.AddForce(p_linear_force);
+
+        // Solid base boundary condition
+        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
+        p_bcs->SetUseJiggledNodesOnPlane(true);
+        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+
+        // Sloughing killer
+        MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+        simulator.AddCellKiller(p_killer);
+
+        // Solve to Steady State
+        simulator.Solve();
+
+        // Mark Ancestors
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
         // Reset end time for simulation and run for a further duration
         simulator.SetEndTime(M_END_TIME);
+
         simulator.Solve();
-
-
-        {
-            // // Load steady state
-            // OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-            // MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
-
-            // std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
-
-            // // Run to Steady State
-            // p_simulator_1->SetOutputDirectory(output_directory_1);
-            // // p_simulator_1->Solve();
-
-            // // Mark Ancestors
-            // p_simulator_1->rGetCellPopulation().SetCellAncestorsToLocationIndices();
-
-            // // Reset end time for simulation and run for a further duration
-            // p_simulator_1->SetEndTime(M_END_TIME);
-            // p_simulator_1->Solve();
-
-            // // Tidy up
-            // delete p_simulator_1;
-            // delete p_cell_population_1;
-        }
-
-        /*
-         * == No ghosts Finite VT == 
-         */
-        // {
-        //     // Load steady state
-        //     OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-        //     MeshBasedCellPopulation<2>* p_cell_population_2 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
-
-        //     std::string output_directory_2 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/FiniteVT";
-            
-        //     // Bound the VT
-        //     p_cell_population_2->SetBoundVoronoiTessellation(true);
-
-        //     // Run to Steady State
-        //     p_simulator_2->SetOutputDirectory(output_directory_2);
-        //     p_simulator_2->Solve();
-
-        //     // Mark Ancestors
-        //     p_simulator_2->rGetCellPopulation().SetCellAncestorsToLocationIndices();
-
-        //     // Reset end time for simulation and run for a further duration
-        //     p_simulator_2->SetEndTime(M_END_TIME);
-        //     p_simulator_2->Solve();
-
-        //     // Tidy up
-        //     delete p_simulator_2;
-        // }
-
-
-        // Clear singletons
-        WntConcentration<2>::Instance()->Destroy();
     }
 
     void noTestMeshBasedGhostsCrypt()
@@ -366,11 +376,6 @@ public:
         // Output Voroni for visualisation
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
         cell_population.SetWriteVtkAsPoints(true);
-        
-        // Create an instance of a Wnt concentration
-        WntConcentration<2>::Instance()->SetType(LINEAR);
-        WntConcentration<2>::Instance()->SetCellPopulation(cell_population);
-        WntConcentration<2>::Instance()->SetCryptLength(M_CRYPT_LENGTH);
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -380,6 +385,12 @@ public:
         simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
 
         // Add volume tracking Modifier
         MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
@@ -408,23 +419,21 @@ public:
 
         // Run simulation to new end time
         simulator.Solve();
-
-        // Clear singletons
-        WntConcentration<2>::Instance()->Destroy();
     }
 
     /*
      * == VM ==
      *
      * Simulate cell proliferation in the colorectal crypt using the
-     * Cell Vertex model.
+     * Cell Vertex model. With smoothed edges.
      */
-    void NoTestVertexBasedCrypt()
+    void noTestVertexBasedSmoothedCrypt()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Vertex";
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Smoothed";
 
         // Create mesh
-        CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, true);
+        bool is_flat_bottom = true; // only different here with jagged is this.
+        CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, is_flat_bottom);
         Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
         p_mesh->SetCellRearrangementThreshold(0.1);
 
@@ -438,11 +447,6 @@ public:
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
 
-        // Create an instance of a Wnt concentration
-        WntConcentration<2>::Instance()->SetType(LINEAR);
-        WntConcentration<2>::Instance()->SetCellPopulation(cell_population);
-        WntConcentration<2>::Instance()->SetCryptLength(M_CRYPT_LENGTH);
-
         // Create crypt simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetDt(M_DT_TIME);
@@ -453,6 +457,12 @@ public:
         simulator.SetOutputCellVelocities(true);
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
+
         // Add volume tracking modifier
         MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
         simulator.AddSimulationModifier(p_modifier);
@@ -462,7 +472,7 @@ public:
         p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
         p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
-        p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(10.0);
+        p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
         simulator.AddForce(p_force);
 
         // Solid base Boundary condition
@@ -485,7 +495,157 @@ public:
         simulator.Solve();
 
         // Clear singletons
-        WntConcentration<2>::Instance()->Destroy();
+        Warnings::Instance()->QuietDestroy();
+    }
+
+    void TestVertexBasedJaggedCrypt()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
+
+        // Create mesh
+        bool is_flat_bottom = false; // only different here with smoothed is this.
+        CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, is_flat_bottom);
+        Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
+        p_mesh->SetCellRearrangementThreshold(0.1);
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(p_mesh->GetNumElements(),cells,1.0,M_CONTACT_INHIBITION_LEVEL); //mature_volume = 1.0
+
+        // Create tissue
+        VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+
+        // Create crypt simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
+        MAKE_PTR(NagaiHondaForce<2>, p_force);
+        p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
+        p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
+        p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
+        p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
+        simulator.AddForce(p_force);
+
+        // Solid base Boundary condition
+        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
+        p_bcs->SetUseJiggledNodesOnPlane(true);
+        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+
+        // Sloughing killer
+        MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+        simulator.AddCellKiller(p_killer);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Mark Ancestors
+        simulator.SetEndTime(M_END_TIME);
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        // Run simulation to new end time
+        simulator.Solve();
+
+        // Clear singletons
+        Warnings::Instance()->QuietDestroy();
+    }
+
+    /*
+     * == VM ==
+     *
+     * Simulate cell proliferation in the colorectal crypt using the
+     * Cell Vertex model with curved edges.
+     */
+    void noTestVertexBasedCurvedCrypt()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved";
+
+        // Create mesh
+        CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, true);
+        Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
+        p_mesh->SetCellRearrangementThreshold(0.1);
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(p_mesh->GetNumElements(),cells,1.0,M_CONTACT_INHIBITION_LEVEL); //mature_volume = 1.0
+
+        // Create tissue
+        VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+
+        // Create crypt simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Refine the edges on boundary to get smooth edges
+        MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
+        simulator.AddSimulationModifier(refinement_modifier);
+
+        // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
+        MAKE_PTR(NagaiHondaForce<2>, p_force);
+        p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
+        p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
+        p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
+        p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
+        simulator.AddForce(p_force);
+
+        // Solid base Boundary condition
+        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
+        p_bcs->SetUseJiggledNodesOnPlane(true);
+        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+
+        // Sloughing killer
+        MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+        simulator.AddCellKiller(p_killer);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Mark Ancestors
+        simulator.SetEndTime(M_END_TIME);
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        // Run simulation to new end time
+        simulator.Solve();
+
+        // Clear singletons
         Warnings::Instance()->QuietDestroy();
     }
 };
