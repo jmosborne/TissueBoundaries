@@ -64,7 +64,8 @@ void VoidAreaModifier<DIM>::SetOutputDirectory(std::string outputDirectory)
     OutputFileHandler output_file_handler(mOutputDirectory+"/", false);
     out_stream locationFile = output_file_handler.OpenOutputFile("voidArea.dat");
     *locationFile << "time \t";
-    *locationFile << "VoidArea" << "\t";
+    *locationFile << "PixelVoidArea" << "\t";
+    *locationFile << "CellVoidArea" << "\t";
     *locationFile << "\n";
     locationFile->close();
 }
@@ -101,12 +102,13 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
 {
     if(DIM == 2)
     {
-        double void_area = 0.0;
+        double pixel_void_area = 0.0;
+        double cell_void_area = 0.0;
 
         // both NodeBased and MeshBased (with no ghosts) populations are treated the same here, as both just have a cutoff radius
-        if( (bool(dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation)) 
-        || bool(dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation)))
-        && !(bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))) )
+        // if( (bool(dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation)) 
+        // || bool(dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation)))
+        // && !(bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))) )
         {
             double pixel_radial_reach = 0.5*mCutoff;
             double separation_between_pixels = mPixelSeparation;
@@ -141,7 +143,7 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
 
                     if(!does_pixel_contain_cell)
                     {
-                        void_area = void_area + area_of_pixel;
+                        pixel_void_area = pixel_void_area + area_of_pixel;
                     }
                 }
 
@@ -155,8 +157,8 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
         // }
         
         // We handle Vertex model a little differently as there is a very natural cell area defined
-        if(bool(dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation)) 
-        || bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation)))
+        // if(bool(dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation)) 
+        // || bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation)))
         {
             double tissue_area = 0.0;
 
@@ -170,7 +172,7 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
                 tissue_area = tissue_area + cell_volume;
             }
 
-            void_area = (rCellPopulation.rGetMesh().GetWidth(0))*(rCellPopulation.rGetMesh().GetWidth(1)) - tissue_area;
+            cell_void_area = (rCellPopulation.rGetMesh().GetWidth(0))*(rCellPopulation.rGetMesh().GetWidth(1)) - tissue_area;
             
         }
 
@@ -178,7 +180,8 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
         out_stream locationFile = output_file_handler.OpenOutputFile("voidArea.dat", std::ios::app);
         SimulationTime* p_time = SimulationTime::Instance();
         *locationFile << p_time->GetTime() << "\t";
-        *locationFile << void_area << "\t";
+        *locationFile << pixel_void_area << "\t";
+        *locationFile << cell_void_area << "\t";
         *locationFile << "\n";
         locationFile->close();
 

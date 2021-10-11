@@ -54,17 +54,17 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 0.01;
+static const double M_END_STEADY_STATE = 0.5;
 static const double M_END_TIME = 2.0;
-static const double M_DT_TIME = 0.005;
-static const double M_SAMPLE_TIME = 1;
+static const double M_DT_TIME = 0.001;
+static const double M_SAMPLE_TIME = 10;
 
 // Both Width and Length must be EVEN numbers here
 static const double M_DOMAIN_WIDTH = 12;
 static const double M_DOMAIN_LENGTH = 14;
 static const double M_DOMAIN_SCALING = 0.8;
-static const double M_PERIODIC_WIDTH = M_DOMAIN_WIDTH*M_DOMAIN_SCALING;
-static const double M_PERIODIC_HEIGHT = M_DOMAIN_LENGTH*0.5*sqrt(3)*M_DOMAIN_SCALING;
+static const double M_PERIODIC_WIDTH = 10;//M_DOMAIN_WIDTH*M_DOMAIN_SCALING;
+static const double M_PERIODIC_HEIGHT = 10;//M_DOMAIN_LENGTH*0.5*sqrt(3)*M_DOMAIN_SCALING;
 
 static const double M_HOLEWIDTH = 2.0;
 static const double M_HOLE_X_MIN = 2.0;
@@ -194,10 +194,12 @@ public:
      *
      * Simulate an internal void using the
      * Overlapping Spheres model.
+     *
+     * Default Cutt-off = 1.5
      */
-    void NoTestNodeBasedInternalVoid()
+    void TestNodeBasedDefaultCutoffInternalVoid()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Node/Pre-void";
+        std::string output_directory = M_HEAD_FOLDER + "/Node/DefaultCutOff/Pre-void";
         /* 
          * == Pre-void == 
          */
@@ -247,6 +249,7 @@ public:
         // Track the area of the void
         MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
         voidarea_modifier->SetOutputDirectory(output_directory);
+        voidarea_modifier->SetCutoff(cut_off_length);
         simulator.AddSimulationModifier(voidarea_modifier);
 
         // Run simulation
@@ -266,7 +269,7 @@ public:
             OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
             NodeBasedCellPopulation<2>* p_cell_population_1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/DefaultCutOff";
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/DefaultCutOff/Post-Void";
 
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
@@ -274,6 +277,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
+            voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
@@ -287,12 +291,206 @@ public:
             delete p_simulator_1;
         }
 
+    }
+
+    /*
+     * == Larger cut-off ==
+     * Cut-off = 2.0
+     */
+    void TestNodeBasedLargeCutoffInternalVoid()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCuttoff/Pre-void";
+        /* 
+         * == Pre-void == 
+         */
+         // Create simple mesh
+        HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, 0);
+        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        p_generating_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
+
+        double cut_off_length = 2.0; //this is the default
+
+        // Convert this to a PeriodicNodesOnlyMesh
+        c_vector<double,2> periodic_width = zero_vector<double>(2);
+        periodic_width[0] = M_PERIODIC_WIDTH;
+        periodic_width[1] = M_PERIODIC_HEIGHT;
+        PeriodicNodesOnlyMesh<2>* p_mesh = new PeriodicNodesOnlyMesh<2>(periodic_width);
+        p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 2.0);
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        MAKE_PTR(DifferentiatedCellProliferativeType, p_differentiated_type);
+        CellsGenerator<NoCellCycleModel, 2> cells_generator;
+        cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumNodes(), p_differentiated_type);
+
+        // Create a node-based cell population
+        NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellWriter<CellVolumesWriter>();
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        p_linear_force->SetCutOffLength(cut_off_length);
+        simulator.AddForce(p_linear_force);
+
+        // Track the area of the void
+        MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
+        voidarea_modifier->SetOutputDirectory(output_directory);
+        voidarea_modifier->SetCutoff(cut_off_length);
+        simulator.AddSimulationModifier(voidarea_modifier);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Save simulation in steady state
+		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
+
+        // Clear memory
+        delete p_mesh;
+
         /*
-         * == Larger cut-off ==
+         * == Void default cut-off == 
          */
         {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            NodeBasedCellPopulation<2>* p_cell_population_1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/LargeCutoff/Post-void";
+
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
+       
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
+            voidarea_modifier1->SetOutputDirectory(output_directory_1);
+            voidarea_modifier1->SetCutoff(cut_off_length);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier1);
+        
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_1->SetDt(M_DT_TIME);
+            p_simulator_1->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->SetOutputDirectory(output_directory_1);
+            p_simulator_1->Solve();
+
+            // Tidy up
+            delete p_simulator_1;
         }
+
+    }
+
+    /*
+     * == Larger cut-off ==
+     * Cut-off = 1.0
+     */
+    void TestNodeBasedSmallCutoffInternalVoid()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Node/SmallCutoff/Pre-void";
+        /* 
+         * == Pre-void == 
+         */
+         // Create simple mesh
+        HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, 0);
+        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        p_generating_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
+
+        double cut_off_length = 1.0; //this is the default
+
+        // Convert this to a PeriodicNodesOnlyMesh
+        c_vector<double,2> periodic_width = zero_vector<double>(2);
+        periodic_width[0] = M_PERIODIC_WIDTH;
+        periodic_width[1] = M_PERIODIC_HEIGHT;
+        PeriodicNodesOnlyMesh<2>* p_mesh = new PeriodicNodesOnlyMesh<2>(periodic_width);
+        p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 2.0);
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        MAKE_PTR(DifferentiatedCellProliferativeType, p_differentiated_type);
+        CellsGenerator<NoCellCycleModel, 2> cells_generator;
+        cells_generator.GenerateBasicRandom(cells, p_mesh->GetNumNodes(), p_differentiated_type);
+
+        // Create a node-based cell population
+        NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellWriter<CellVolumesWriter>();
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        p_linear_force->SetCutOffLength(cut_off_length);
+        simulator.AddForce(p_linear_force);
+
+        // Track the area of the void
+        MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
+        voidarea_modifier->SetOutputDirectory(output_directory);
+        voidarea_modifier->SetCutoff(cut_off_length);
+        simulator.AddSimulationModifier(voidarea_modifier);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Save simulation in steady state
+		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
+
+        // Clear memory
+        delete p_mesh;
+
+        /*
+         * == Void default cut-off == 
+         */
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            NodeBasedCellPopulation<2>* p_cell_population_1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/SmallCuttoff/Post-void";
+
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
+       
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
+            voidarea_modifier1->SetOutputDirectory(output_directory_1);
+            voidarea_modifier1->SetCutoff(cut_off_length);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier1);
+        
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_1->SetDt(M_DT_TIME);
+            p_simulator_1->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->SetOutputDirectory(output_directory_1);
+            p_simulator_1->Solve();
+
+            // Tidy up
+            delete p_simulator_1;
+        }
+
     }
 
     /* 
@@ -305,7 +503,7 @@ public:
     /*
      * == No ghosts == 
      */
-    void noTestMeshBasedNoGhostsInternalVoid()
+    void xTestMeshBasedNoGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/NoGhosts/Pre-Void";
 
@@ -361,22 +559,22 @@ public:
          * == No ghosts Infinite VT == 
          */
         {
-            // // Load steady state
-            // OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-            // MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            MeshBasedCellPopulation<2>* p_cell_population_1 = static_cast<MeshBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-            // std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
 
-            // // Now remove cells in a given region using a helper method
-            // CreateHoleInCellPopulation(*p_cell_population_1);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
 
-            // // Reset end time for simulation and run for a further duration
-            // p_simulator_1->SetOutputDirectory(output_directory_1);
-            // p_simulator_1->SetEndTime(M_END_TIME);
-            // p_simulator_1->Solve();
+            // Reset end time for simulation and run for a further duration
+            p_simulator_1->SetOutputDirectory(output_directory_1);
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->Solve();
 
-            // // Tidy up
-            // delete p_simulator_1;
+            // Tidy up
+            delete p_simulator_1;
         }
 
         /*
@@ -414,7 +612,7 @@ public:
     /*
      * == Ghosts ==
      */
-    void NoTestMeshBasedGhostsInternalVoid()
+    void xTestMeshBasedGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/Ghosts/Pre-Void";
 
@@ -514,7 +712,7 @@ public:
      * Simulation internal void using the
      * Cell Vertex model.
      */
-    void TestVertexBasedInternalVoid()
+    void xTestVertexBasedInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Vertex/Pre-void";
 
@@ -578,65 +776,65 @@ public:
         // Save simulation in steady state
 		CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Save(&simulator);
 
-        // /*
-        //  * == Smooth void == 
-        //  */
-        // {
-        //     // Load steady state
-        //     OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-        //     VertexBasedCellPopulation<2>* p_cell_population_1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
+        /*
+         * == Smooth void == 
+         */
+        {
+            // Load steady state
+            OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            VertexBasedCellPopulation<2>* p_cell_population_1 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-        //     std::string output_directory_1 =  M_HEAD_FOLDER + "/Vertex/Smooth";
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Vertex/Smooth";
 
-        //     // Now remove cells in a given region using a helper method
-        //     CreateHoleInCellPopulation(*p_cell_population_1);
-        //     SmoothVertexMeshEdges(*p_cell_population_1);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_1);
+            SmoothVertexMeshEdges(*p_cell_population_1);
 
-        //     // Track the area of the void
-        //     MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_1);
-        //     voidarea_modifier_1->SetOutputDirectory(output_directory_1);
-        //     p_simulator_1->AddSimulationModifier(voidarea_modifier_1);
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_1);
+            voidarea_modifier_1->SetOutputDirectory(output_directory_1);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier_1);
 
-        //     // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        //     p_simulator_1->SetDt(M_DT_TIME);
-        //     p_simulator_1->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
-        //     p_simulator_1->SetEndTime(M_END_TIME);
-        //     p_simulator_1->SetOutputDirectory(output_directory_1);
-        //     p_simulator_1->Solve();
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_1->SetDt(M_DT_TIME);
+            p_simulator_1->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+            p_simulator_1->SetEndTime(M_END_TIME);
+            p_simulator_1->SetOutputDirectory(output_directory_1);
+            p_simulator_1->Solve();
 
-        //     // Tidy up
-        //     delete p_simulator_1;
-        // }
+            // Tidy up
+            delete p_simulator_1;
+        }
 
-        // /*
-        //  * == Jagged void ==
-        //  */
-        //  // Load steady state
+        /*
+         * == Jagged void ==
+         */
+         // Load steady state
 
-        // {
-        //     OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
-        //     VertexBasedCellPopulation<2>* p_cell_population_2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
+        {
+            OffLatticeSimulation<2>* p_simulator_2 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
+            VertexBasedCellPopulation<2>* p_cell_population_2 = static_cast<VertexBasedCellPopulation<2>*>(&(p_simulator_2->rGetCellPopulation()));
             
-        //     std::string output_directory_2 =  M_HEAD_FOLDER + "/Vertex/Jagged";
+            std::string output_directory_2 =  M_HEAD_FOLDER + "/Vertex/Jagged";
 
-        //     // Now remove cells in a given region using a helper method
-        //     CreateHoleInCellPopulation(*p_cell_population_2);
+            // Now remove cells in a given region using a helper method
+            CreateHoleInCellPopulation(*p_cell_population_2);
 
-        //     // Track the area of the void
-        //     MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_2);
-        //     voidarea_modifier_2->SetOutputDirectory(output_directory_2);
-        //     p_simulator_2->AddSimulationModifier(voidarea_modifier_2);
+            // Track the area of the void
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_2);
+            voidarea_modifier_2->SetOutputDirectory(output_directory_2);
+            p_simulator_2->AddSimulationModifier(voidarea_modifier_2);
 
-        //     // Reset timestep, sampling timestep and end time for simulation and run for a further duration
-        //     p_simulator_2->SetDt(M_DT_TIME);
-        //     p_simulator_2->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
-        //     p_simulator_2->SetEndTime(M_END_TIME);
-        //     p_simulator_2->SetOutputDirectory(output_directory_2);
-        //     p_simulator_2->Solve();
+            // Reset timestep, sampling timestep and end time for simulation and run for a further duration
+            p_simulator_2->SetDt(M_DT_TIME);
+            p_simulator_2->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+            p_simulator_2->SetEndTime(M_END_TIME);
+            p_simulator_2->SetOutputDirectory(output_directory_2);
+            p_simulator_2->Solve();
 
-        //     // Tidy up
-        //     delete p_simulator_2;
-        // }
+            // Tidy up
+            delete p_simulator_2;
+        }
 
         /*
          * == Curved edges ==
