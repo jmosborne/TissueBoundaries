@@ -249,7 +249,7 @@ public:
         // Track the area of the void
         MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
         voidarea_modifier->SetOutputDirectory(output_directory);
-        voidarea_modifier->SetCutoff(cut_off_length);
+        // voidarea_modifier->SetCutoff(cut_off_length);
         simulator.AddSimulationModifier(voidarea_modifier);
 
         // Run simulation
@@ -277,7 +277,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
-            voidarea_modifier1->SetCutoff(cut_off_length);
+            // voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
@@ -299,7 +299,7 @@ public:
      */
     void TestNodeBasedLargeCutoffInternalVoid()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCuttoff/Pre-void";
+        std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCutoff/Pre-void";
         /* 
          * == Pre-void == 
          */
@@ -349,7 +349,7 @@ public:
         // Track the area of the void
         MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
         voidarea_modifier->SetOutputDirectory(output_directory);
-        voidarea_modifier->SetCutoff(cut_off_length);
+        // voidarea_modifier->SetCutoff(cut_off_length);
         simulator.AddSimulationModifier(voidarea_modifier);
 
         // Run simulation
@@ -377,7 +377,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
-            voidarea_modifier1->SetCutoff(cut_off_length);
+            // voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
@@ -449,7 +449,7 @@ public:
         // Track the area of the void
         MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier);
         voidarea_modifier->SetOutputDirectory(output_directory);
-        voidarea_modifier->SetCutoff(cut_off_length);
+        // voidarea_modifier->SetCutoff(cut_off_length);
         simulator.AddSimulationModifier(voidarea_modifier);
 
         // Run simulation
@@ -469,7 +469,7 @@ public:
             OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
             NodeBasedCellPopulation<2>* p_cell_population_1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/SmallCuttoff/Post-void";
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/SmallCutoff/Post-void";
 
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
@@ -477,7 +477,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
-            voidarea_modifier1->SetCutoff(cut_off_length);
+            // voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
