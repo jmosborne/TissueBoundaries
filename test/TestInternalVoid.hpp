@@ -394,7 +394,7 @@ public:
     }
 
     /*
-     * == Larger cut-off ==
+     * == Small cut-off ==
      * Cut-off = 1.0
      */
     void TestNodeBasedSmallCutoffInternalVoid()
