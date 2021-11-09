@@ -60,8 +60,6 @@ static const double M_SAMPLE_TIME = 50;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
 static const double M_STEM_CELL_DIVISION_PROBABILITY = 0.1;
 static const double M_STEM_CELL_MINIMUM_DIVISION_AGE = 1.0;
-static const double M_TRANSIT_CELL_DIVISION_PROBABILITY = 0.05;
-static const double M_TRANSIT_CELL_MINIMUM_DIVISION_AGE = 2.0;
 
 static const double M_INITIAL_WIDTH = 10;
 static const double M_INITIAL_LENGTH = 10;
@@ -120,7 +118,7 @@ private:
         if (bool(dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation)))
         {
             std::set<unsigned> location_indices;
-            std::set<unsigned> ghost_node_indices;
+            std::set<unsigned> ghost_node_indices = dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation)->GetGhostNodeIndices();
 
             for (std::list<CellPtr>::iterator cell_iter = rCellPopulation.rGetCells().begin();
                 cell_iter != rCellPopulation.rGetCells().end();)
@@ -195,7 +193,7 @@ private:
      */ 
 
     void GenerateCells(unsigned num_cells, std::vector<CellPtr>& rCells, double equilibriumVolume, double quiescentVolumeFraction, 
-            double stemCellDivisionProbability, double stemCellMinimumDivisionAge, double transitCellDivisionProbability, double transitCellMinimumDivisionAge)
+            double stemCellDivisionProbability, double stemCellMinimumDivisionAge)
     {
 
         boost::shared_ptr<AbstractCellProperty> p_state(CellPropertyRegistry::Instance()->Get<WildTypeCellMutationState>());
@@ -210,26 +208,12 @@ private:
             p_model->SetQuiescentVolumeFraction(quiescentVolumeFraction);
             p_model->SetStemCellDivisionProbability(stemCellDivisionProbability);
             p_model->SetStemCellMinimumDivisionAge(stemCellMinimumDivisionAge);
-            p_model->SetTransitCellDivisionProbability(transitCellDivisionProbability);
-            p_model->SetTransitCellMinimumDivisionAge(transitCellMinimumDivisionAge);
 
             CellPtr p_cell(new Cell(p_state, p_model));
-            // Half of the cells set as stem cells, half as transit cells
-            double split = 0.5*((double) (num_cells));
-            if ( i>split )
-            {
-                p_cell->SetCellProliferativeType(p_stem_cell_type);
-                double ave_stem_cell_cycle_duration = p_model->GetAverageStemCellCycleTime();
-                double birth_time = - RandomNumberGenerator::Instance()->ranf() * ave_stem_cell_cycle_duration;
-                p_cell->SetBirthTime(birth_time);
-            }
-            else
-            {
-                p_cell->SetCellProliferativeType(p_transit_cell_type);
-                double ave_transit_cell_cycle_duration = p_model->GetAverageTransitCellCycleTime();
-                double birth_time = - RandomNumberGenerator::Instance()->ranf() * ave_transit_cell_cycle_duration;
-                p_cell->SetBirthTime(birth_time);
-            }
+            p_cell->SetCellProliferativeType(p_stem_cell_type);
+            double ave_stem_cell_cycle_duration = p_model->GetAverageStemCellCycleTime();
+            double birth_time = - RandomNumberGenerator::Instance()->ranf() * ave_stem_cell_cycle_duration;
+            p_cell->SetBirthTime(birth_time);
 
             // Set Target Area so dont need to use a growth model in vertex simulations
             p_cell->GetCellData()->SetItem("target area", 1.0);
@@ -268,8 +252,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells, M_PI*0.25,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
 
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -340,8 +323,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells, M_PI*0.25,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
 
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -412,8 +394,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells, M_PI*0.25,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
 
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -474,7 +455,7 @@ public:
          * == Ghosts == 
          */
          // Create mesh
-        unsigned thickness_of_ghost_layer = 10;
+        unsigned thickness_of_ghost_layer = 2;
         HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH, thickness_of_ghost_layer);
         MutableMesh<2,2>* p_mesh = generator.GetMesh();
 
@@ -485,9 +466,8 @@ public:
 
         // Create cells
         std::vector<CellPtr> cells;
-        GenerateCells(p_mesh->GetNumNodes(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
+        GenerateCells(location_indices.size(),cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
 
         // // Create tissue
         // MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
@@ -537,7 +517,7 @@ public:
 
     }
 
-    void TestMeshBasedNoGhostsInfiniteVTGrowingMonolayer()
+    void noTestMeshBasedNoGhostsInfiniteVTGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
 
@@ -553,8 +533,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
 
         // Create tissue
         MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -602,7 +581,7 @@ public:
 
     }
     
-    void TestMeshBasedNoGhostsFiniteVTGrowingMonolayer()
+    void noTestMeshBasedNoGhostsFiniteVTGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/FiniteVT";
 
@@ -621,8 +600,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
 
         // Create tissue
         MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -689,8 +667,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumElements(), cells,1.0,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
 
         // Create tissue
         VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -758,8 +735,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumElements(), cells,1.0,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
 
         // Create tissue
         VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -833,8 +809,7 @@ public:
         // Create cells
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumElements(), cells,1.0,M_CONTACT_INHIBITION_LEVEL,
-                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
-                M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
+                M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
 
         // Create tissue
         VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
