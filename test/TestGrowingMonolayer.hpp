@@ -46,13 +46,16 @@
 #include "Warnings.hpp"
 #include "Debug.hpp"
 
+#include "CicularityCalcModifier.hpp"
+#include "BoundaryCellWriter.hpp"
+
 /*
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_TIME = 50; //100
+static const double M_END_TIME = 10; //100
 static const double M_DT_TIME = 0.005;
-static const double M_SAMPLE_TIME = 100;
+static const double M_SAMPLE_TIME = 50;
 
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
 static const double M_STEM_CELL_DIVISION_PROBABILITY = 0.1;
@@ -243,7 +246,7 @@ public:
      * Simulate a growing monolayer using the
      * Overlapping Spheres model.
      */
-    void noTestNodeBasedGrowingMonolayer()
+    void TestNodeBasedGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/Default";
 
@@ -275,6 +278,8 @@ public:
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
         RoundOutCellPopulation(cell_population);
 
         // Create simulation from cell population
@@ -296,6 +301,10 @@ public:
         p_linear_force->SetCutOffLength(cut_off_length);
         simulator.AddForce(p_linear_force);
 
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
+
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
@@ -312,7 +321,7 @@ public:
      * Cut-off = 2.0
      */
 
-    void noTestNodeBasedLargeCutoffGrowingMonolayer()
+    void TestNodeBasedLargeCutoffGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCutoff";
 
@@ -341,6 +350,8 @@ public:
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
         RoundOutCellPopulation(cell_population);
 
         // Create simulation from cell population
@@ -362,6 +373,10 @@ public:
         p_linear_force->SetCutOffLength(cut_off_length);
         simulator.AddForce(p_linear_force);
 
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
+
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
@@ -378,7 +393,7 @@ public:
      * Cut-off = 1.0
      */
 
-    void noTestNodeBasedSmallCutoffGrowingMonolayer()
+    void TestNodeBasedSmallCutoffGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/SmallCutoff";
 
@@ -407,6 +422,8 @@ public:
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
         RoundOutCellPopulation(cell_population);
 
         // Create simulation from cell population
@@ -427,6 +444,10 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         p_linear_force->SetCutOffLength(cut_off_length);
         simulator.AddForce(p_linear_force);
+
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
 
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
@@ -468,8 +489,9 @@ public:
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE,
                 M_TRANSIT_CELL_DIVISION_PROBABILITY,M_TRANSIT_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
 
-        // Create tissue
-        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
+        // // Create tissue
+        // MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
+        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, 15 , 1, 1);
 
         // Output Voroni for visualisation
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
@@ -479,6 +501,9 @@ public:
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
+
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
 
         RoundOutCellPopulation(cell_population);
 
@@ -499,6 +524,10 @@ public:
         MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
+
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
 
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
@@ -539,6 +568,8 @@ public:
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
         RoundOutCellPopulation(cell_population);
 
         // Create simulation from cell population
@@ -558,6 +589,10 @@ public:
         MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
+
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
 
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
@@ -597,6 +632,8 @@ public:
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
 
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
         RoundOutCellPopulation(cell_population);
 
         // Create simulation from cell population
@@ -617,6 +654,10 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
 
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
+
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
@@ -631,7 +672,7 @@ public:
      * Simulate a growing monolayer using the
      * Cell Vertex model.
      */
-    void noTestVertexBasedGrowingMonolayer() 
+    void TestVertexBasedGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
 
@@ -657,6 +698,8 @@ public:
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
+
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         RoundOutCellPopulation(cell_population);
 
@@ -684,6 +727,10 @@ public:
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
+
         // Add target area modifier
         // MAKE_PTR(SimpleTargetAreaModifier<2>, p_growth_modifier);
         // p_growth_modifier->SetGrowthDuration(0);
@@ -694,7 +741,7 @@ public:
 
     }
 
-    void noTestVertexBasedSmoothGrowingMonolayer() 
+    void TestVertexBasedSmoothGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Smooth";
 
@@ -721,6 +768,9 @@ public:
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
+
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
 
         RoundOutCellPopulation(cell_population);
 
@@ -749,6 +799,10 @@ public:
         p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(10.0);
         simulator.AddForce(p_force);
 
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
+
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
@@ -762,7 +816,7 @@ public:
 
     }
 
-    void noTestVertexBasedCurvedGrowingMonolayer() 
+    void TestVertexBasedCurvedGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved";
 
@@ -788,6 +842,8 @@ public:
         cell_population.AddCellWriter<CellVolumesWriter>();
         cell_population.AddCellWriter<CellIdWriter>();
         cell_population.AddCellWriter<CellAncestorWriter>();
+
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         RoundOutCellPopulation(cell_population);
 
@@ -815,6 +871,10 @@ public:
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
         p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(10.0);
         simulator.AddForce(p_force);
+
+        MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
+        circularity_modifier->SetOutputDirectory(output_directory);
+        simulator.AddSimulationModifier(circularity_modifier);
 
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();

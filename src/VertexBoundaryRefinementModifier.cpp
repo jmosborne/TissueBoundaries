@@ -93,7 +93,7 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
             {
                 unsigned next_node_local_index = (node_local_index+1) % (elem_iter->GetNumNodes());
 
-    //PRINT_3_VARIABLES(node_local_index,next_node_local_index,num_nodes);
+                //PRINT_3_VARIABLES(node_local_index,next_node_local_index,num_nodes);
 
                 unsigned node_global_index = elem_iter->GetNodeGlobalIndex(node_local_index);
                 unsigned next_node_global_index = elem_iter->GetNodeGlobalIndex(next_node_local_index);
