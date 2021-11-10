@@ -48,7 +48,7 @@ plot(timeData,VertexJaggedVoidArea,':','linewidth',mLineWidth)
 plot(timeData,VertexSmoothVoidArea,':','linewidth',mLineWidth)
 
 hold off;
-legend('Mesh','Mesh Ghosts','Node','Vertex Jagged','Vertex Smooth','fontsize',14)
-xlabel('Time (seconds)','fontsize',14)
-ylabel('Void Area (CD^2)','fontsize',14)
-title('Void Area with Domain scaling of 0.8','fontsize',16)
+legend('Mesh','Mesh Ghosts','Node','Vertex Jagged','Vertex Smooth','fontsize',14,'interpreter','Latex')
+xlabel('Time (seconds)','fontsize',14,'interpreter','Latex')
+ylabel('Void Area (CD^2)','fontsize',14,'interpreter','Latex')
+title('Void Area with Domain scaling of 0.8','fontsize',16,'interpreter','Latex')

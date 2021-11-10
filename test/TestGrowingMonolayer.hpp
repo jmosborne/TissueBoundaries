@@ -49,11 +49,13 @@
 #include "CicularityCalcModifier.hpp"
 #include "BoundaryCellWriter.hpp"
 
+#include "GhostNodeRemovalModifier.hpp"
+
 /*
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_TIME = 10; //100
+static const double M_END_TIME = 25; //100
 static const double M_DT_TIME = 0.005;
 static const double M_SAMPLE_TIME = 50;
 
@@ -70,7 +72,7 @@ static const double M_DOMAIN_X_MAX = 5.0;
 static const double M_DOMAIN_Y_MIN = -5.0;
 static const double M_DOMAIN_Y_MAX = 5.0;
 
-static const std::string M_HEAD_FOLDER = "GrowingMonolayer";
+static const std::string M_HEAD_FOLDER = "GrowingMonolayer_25hrs";
 
 class TestGrowingMonolayer : public AbstractCellBasedWithTimingsTestSuite
 {
@@ -455,6 +457,7 @@ public:
          * == Ghosts == 
          */
          // Create mesh
+
         unsigned thickness_of_ghost_layer = 2;
         HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH, thickness_of_ghost_layer);
         MutableMesh<2,2>* p_mesh = generator.GetMesh();
@@ -470,8 +473,8 @@ public:
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
 
         // // Create tissue
-        // MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
-        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, 15 , 1, 1);
+        MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
+        // MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, 15 , 1, 1);
 
         // Output Voroni for visualisation
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
@@ -483,7 +486,6 @@ public:
         cell_population.AddCellWriter<CellAncestorWriter>();
 
         cell_population.AddCellWriter<BoundaryCellWriter>();
-
 
         RoundOutCellPopulation(cell_population);
 
@@ -509,6 +511,9 @@ public:
         circularity_modifier->SetOutputDirectory(output_directory);
         simulator.AddSimulationModifier(circularity_modifier);
 
+        MAKE_PTR(GhostNodeRemovalModifier<2>, GNR_modifier);
+        simulator.AddSimulationModifier(GNR_modifier);   
+
         // Mark Ancestors
         simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
@@ -517,7 +522,7 @@ public:
 
     }
 
-    void noTestMeshBasedNoGhostsInfiniteVTGrowingMonolayer()
+    void TestMeshBasedNoGhostsInfiniteVTGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
 
@@ -569,6 +574,7 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
 
+
         MAKE_PTR(CicularityCalcModifier<2>, circularity_modifier);
         circularity_modifier->SetOutputDirectory(output_directory);
         simulator.AddSimulationModifier(circularity_modifier);
@@ -581,7 +587,7 @@ public:
 
     }
     
-    void noTestMeshBasedNoGhostsFiniteVTGrowingMonolayer()
+    void TestMeshBasedNoGhostsFiniteVTGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/FiniteVT";
 

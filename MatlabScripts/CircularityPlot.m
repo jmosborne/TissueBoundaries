@@ -1,12 +1,14 @@
-VertexCircularityJaggedRaw = importdata('GrowingMonolayer/Vertex/Jagged/CicularityCalc.dat');
-VertexCircularitySmoothRaw = importdata('GrowingMonolayer/Vertex/Smooth/CicularityCalc.dat');
-VertexCircularityCurvedRaw = importdata('GrowingMonolayer/Vertex/Curved/CicularityCalc.dat');
-NodeCircularityDefaultRaw = importdata('GrowingMonolayer/Node/Default/CicularityCalc.dat');
-NodeCircularityLargeRaw = importdata('GrowingMonolayer/Node/LargeCutoff/CicularityCalc.dat');
-NodeCircularitySmallRaw = importdata('GrowingMonolayer/Node/SmallCutoff/CicularityCalc.dat');
-MeshCircularityGhostRaw = importdata('GrowingMonolayer/Mesh/Ghosts/CicularityCalc.dat');
-MeshCircularityInfRaw = importdata('GrowingMonolayer/Mesh/NoGhosts/InfiniteVT/CicularityCalc.dat');
-MeshCircularityFinRaw = importdata('GrowingMonolayer/Mesh/NoGhosts/FiniteVT/CicularityCalc.dat');
+master = 'GrowingMonolayer_25hrs';
+
+VertexCircularityJaggedRaw = importdata(append(master, '/Vertex/Jagged/CicularityCalc.dat'));
+VertexCircularitySmoothRaw = importdata(append(master, '/Vertex/Smooth/CicularityCalc.dat'));
+VertexCircularityCurvedRaw = importdata(append(master, '/Vertex/Curved/CicularityCalc.dat'));
+NodeCircularityDefaultRaw = importdata(append(master, '/Node/Default/CicularityCalc.dat'));
+NodeCircularityLargeRaw = importdata(append(master, '/Node/LargeCutoff/CicularityCalc.dat'));
+NodeCircularitySmallRaw = importdata(append(master, '/Node/SmallCutoff/CicularityCalc.dat'));
+MeshCircularityGhostRaw = importdata(append(master, '/Mesh/Ghosts/CicularityCalc.dat'));
+MeshCircularityInfRaw = importdata(append(master, '/Mesh/NoGhosts/InfiniteVT/CicularityCalc.dat'));
+MeshCircularityFinRaw = importdata(append(master, '/Mesh/NoGhosts/FiniteVT/CicularityCalc.dat'));
 
 %%
 
@@ -66,55 +68,55 @@ Mesh_F_C = MeshCircularityFinData(:,4);
 %%
 
 figure;
-subplot(1,3,1)
+subplot(2,2,1)
 hold on;
 plot(time,Vertex_J_A,'-','linewidth',1.5)
 plot(time,Vertex_S_A,'-','linewidth',1.5)
 plot(time,Vertex_C_A,'-','linewidth',1.5)
 
-plot(time,Node_D_A,':','linewidth',1.5)
-plot(time,Node_L_A,':','linewidth',1.5)
-plot(time,Node_S_A,':','linewidth',1.5)
+plot(time,Node_D_A,':','linewidth',2)
+plot(time,Node_L_A,':','linewidth',2)
+plot(time,Node_S_A,':','linewidth',2)
 
 plot(time,Mesh_G_A,'--','linewidth',1.5)
 plot(time,Mesh_I_A,'--','linewidth',1.5)
 plot(time,Mesh_F_A,'--','linewidth',1.5)
 hold off
-xlabel('time')
-ylabel('Tissue Area')
+xlabel('time','fontsize',12,'interpreter','Latex')
+ylabel('Tissue Area','fontsize',12,'interpreter','Latex')
 
-subplot(1,3,2)
+subplot(2,2,2)
 hold on;
 plot(time,Vertex_J_P,'-','linewidth',1.5)
 plot(time,Vertex_S_P,'-','linewidth',1.5)
 plot(time,Vertex_C_P,'-','linewidth',1.5)
 
-plot(time,Node_D_P,':','linewidth',1.5)
-plot(time,Node_L_P,':','linewidth',1.5)
-plot(time,Node_S_P,':','linewidth',1.5)
+plot(time,Node_D_P,':','linewidth',2)
+plot(time,Node_L_P,':','linewidth',2)
+plot(time,Node_S_P,':','linewidth',2)
 
 plot(time,Mesh_G_P,'--','linewidth',1.5)
 plot(time,Mesh_I_P,'--','linewidth',1.5)
 plot(time,Mesh_F_P,'--','linewidth',1.5)
 hold off
-xlabel('time')
-ylabel('Tissue Perimiter')
+xlabel('time','fontsize',12,'interpreter','Latex')
+ylabel('Tissue Perimiter','fontsize',12,'interpreter','Latex')
 
-subplot(1,3,3)
+subplot(2,2,3)
 hold on;
 plot(time,Vertex_J_C,'-','linewidth',1.5)
 plot(time,Vertex_S_C,'-','linewidth',1.5)
 plot(time,Vertex_C_C,'-','linewidth',1.5)
 
-plot(time,Node_D_C,':','linewidth',1.5)
-plot(time,Node_L_C,':','linewidth',1.5)
-plot(time,Node_S_C,':','linewidth',1.5)
+plot(time,Node_D_C,':','linewidth',2)
+plot(time,Node_L_C,':','linewidth',2)
+plot(time,Node_S_C,':','linewidth',2)
 
 plot(time,Mesh_G_C,'--','linewidth',1.5)
 plot(time,Mesh_I_C,'--','linewidth',1.5)
 plot(time,Mesh_F_C,'--','linewidth',1.5)
 hold off
-xlabel('time')
-ylabel('Tissue Circularity')
+xlabel('time','fontsize',12,'interpreter','Latex')
+ylabel('Tissue Circularity','fontsize',12,'interpreter','Latex')
 
-legend('Vertex Jagged','Vertex Smooth','Vertex Curved','Node Default','Node Large','Node Small','Mesh Ghosts','Mesh Infinite','Mesh Finite')
+legend('Vertex Jagged','Vertex Smooth','Vertex Curved','Node Default','Node Large','Node Small','Mesh Ghosts','Mesh Infinite','Mesh Finite','fontsize',12,'interpreter','Latex')

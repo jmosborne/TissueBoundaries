@@ -52,8 +52,8 @@ template<unsigned DIM>
 CicularityCalcModifier<DIM>::CicularityCalcModifier()
     : AbstractCellBasedSimulationModifier<DIM>(),
     mOutputDirectory(""),
-    mCutoff(1.8),
-    mPixelSeparation(0.1)
+    mCutoff(2.0),
+    mPixelSeparation(0.25)
 {
 }
 
@@ -71,6 +71,7 @@ void CicularityCalcModifier<DIM>::SetOutputDirectory(std::string outputDirectory
     *locationFile << "Cell_Area" << "\t";
     *locationFile << "Cell_Perimiter" << "\t";
     *locationFile << "Cell_Circularity" << "\t";
+    *locationFile << "Number_Cells" << "\t";
     *locationFile << "\n";
     locationFile->close();
 }
@@ -112,6 +113,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
         double tissue_area = 0.0;
         double tissue_perimiter = 0.0;
+        unsigned number_cells = 0.0;
 
         // both NodeBased and MeshBased (with no ghosts) populations are treated the same here, as both just have a cutoff radius
         // if( (bool(dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation)) 
@@ -130,6 +132,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                     ++cell_iter)
                 {
                     cell_iter->GetCellData()->SetItem("is_boundary", 0.0);
+                    number_cells++;
                 }
 
                 MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
@@ -204,6 +207,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                 {
                     bool check_node = true;
                     cell_iter->GetCellData()->SetItem("is_boundary", 0.0);
+                    number_cells++;
 
                     VertexElement<DIM, DIM>* p_element = p_cell_population->GetElementCorrespondingToCell(*cell_iter);
                     for (unsigned i=0; i<p_element->GetNumNodes(); i++)
@@ -296,6 +300,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                     ++cell_iter)
                 {
                     cell_iter->GetCellData()->SetItem("is_boundary", 0.0);
+                    number_cells++;
 
                     for(unsigned pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
                     {
@@ -567,6 +572,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
         *locationFile << tissue_area << "\t";
         *locationFile << tissue_perimiter << "\t";
         *locationFile << 4*3.141592653589793*tissue_area/(tissue_perimiter*tissue_perimiter) << "\t";
+        *locationFile << number_cells << "\t";
         *locationFile << "\n";
         locationFile->close();
 
