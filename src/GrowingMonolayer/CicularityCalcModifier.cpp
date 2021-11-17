@@ -255,7 +255,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
                 // PRINT_2_VARIABLES(pixel_tissue_width,pixel_tissue_depth);
 
-                double pixel_grid[pixel_tissue_width][pixel_tissue_depth];
+                unsigned pixel_grid[pixel_tissue_width][pixel_tissue_depth];
                 // for(unsigned pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
                 // {
                 //     for(unsigned pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
@@ -270,7 +270,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                 {
                     for(unsigned pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
                     {
-                        pixel_grid[pixel_i][pixel_j] = 0.0;
+                        pixel_grid[pixel_i][pixel_j] = 0;
 
                         double pixel_x_coordinate = -1.0 - x_max + pixel_i*separation_between_pixels;
                         double pixel_y_coordinate = -1.0 - y_max + pixel_j*separation_between_pixels;
@@ -283,7 +283,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
                             if( pow(cell_location[0] - pixel_x_coordinate,2) + pow(cell_location[1] - pixel_y_coordinate,2) < pow(pixel_radial_reach,2) )
                             {
-                                pixel_grid[pixel_i][pixel_j] = 1.0;
+                                pixel_grid[pixel_i][pixel_j] = 1;
                                 // pixel_area = pixel_area + area_of_pixel;
                                 break;
                             }

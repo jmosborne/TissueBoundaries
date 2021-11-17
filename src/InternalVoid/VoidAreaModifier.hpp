@@ -65,12 +65,14 @@ class VoidAreaModifier : public AbstractCellBasedSimulationModifier<DIM,DIM>
         archive & mOutputDirectory;
         archive & mCutoff;
         archive & mPixelSeparation;
+        archive & mPlotPixelContour;
 
     } 
 
     std::string mOutputDirectory;
     double mCutoff;
     double mPixelSeparation;
+    bool mPlotPixelContour;
 
 
 public:
@@ -92,6 +94,8 @@ public:
     virtual void SetCutoff(double cutoff);
 
     virtual void SetPixelSeparation(double pixelSeparation);
+
+    virtual void SetPlotPixelContour(bool plotPixelContour);
 
 
 

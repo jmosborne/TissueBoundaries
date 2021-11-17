@@ -50,12 +50,14 @@
 #include "Warnings.hpp"
 #include "Debug.hpp"
 
+#include "BoundaryCellWriter.hpp"
+
 /*
  *  This is where you can set parameters to be used in all the simulations.
  */
 
 static const double M_END_STEADY_STATE = 0.5;
-static const double M_END_TIME = 2.0;
+static const double M_END_TIME = 1;
 static const double M_DT_TIME = 0.001;
 static const double M_SAMPLE_TIME = 10;
 
@@ -226,6 +228,7 @@ public:
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -269,7 +272,7 @@ public:
             OffLatticeSimulation<2>* p_simulator_1 = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(output_directory,M_END_STEADY_STATE);
             NodeBasedCellPopulation<2>* p_cell_population_1 = static_cast<NodeBasedCellPopulation<2>*>(&(p_simulator_1->rGetCellPopulation()));
 
-            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/DefaultCutOff/Post-Void";
+            std::string output_directory_1 =  M_HEAD_FOLDER + "/Node/DefaultCutOff/Post-void";
 
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
@@ -277,6 +280,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
+            voidarea_modifier1->SetPixelSeparation(0.02);
             // voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
@@ -326,6 +330,8 @@ public:
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<BoundaryCellWriter>();
+
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -377,6 +383,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
+            voidarea_modifier1->SetPixelSeparation(0.02);
             // voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
@@ -426,6 +433,7 @@ public:
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);
@@ -477,6 +485,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier1);
             voidarea_modifier1->SetOutputDirectory(output_directory_1);
+            voidarea_modifier1->SetPixelSeparation(0.02);
             // voidarea_modifier1->SetCutoff(cut_off_length);
             p_simulator_1->AddSimulationModifier(voidarea_modifier1);
         
@@ -503,7 +512,7 @@ public:
     /*
      * == No ghosts == 
      */
-    void xTestMeshBasedNoGhostsInternalVoid()
+    void TestMeshBasedNoGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/NoGhosts/Pre-Void";
 
@@ -520,6 +529,7 @@ public:
         // Create tissue
         MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         // Output Voroni for visualisation
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
@@ -568,6 +578,11 @@ public:
             // Now remove cells in a given region using a helper method
             CreateHoleInCellPopulation(*p_cell_population_1);
 
+            MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_3);
+            voidarea_modifier_3->SetOutputDirectory(output_directory_1);
+            voidarea_modifier_3->SetPlotPixelContour(true);
+            p_simulator_1->AddSimulationModifier(voidarea_modifier_3);
+
             // Reset end time for simulation and run for a further duration
             p_simulator_1->SetOutputDirectory(output_directory_1);
             p_simulator_1->SetEndTime(M_END_TIME);
@@ -593,6 +608,7 @@ public:
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_2);
             voidarea_modifier_2->SetOutputDirectory(output_directory_2);
+            voidarea_modifier_2->SetPlotPixelContour(false);
             p_simulator_2->AddSimulationModifier(voidarea_modifier_2);
             
             // Bound the VT
@@ -612,7 +628,7 @@ public:
     /*
      * == Ghosts ==
      */
-    void xTestMeshBasedGhostsInternalVoid()
+    void TestMeshBasedGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/Ghosts/Pre-Void";
 
@@ -633,6 +649,7 @@ public:
          
         MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, ghost_cell_spring_stiffness, ghost_ghost_spring_stiffness, ghost_spring_rest_length);
         cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         // Output Voroni for visualisation
         cell_population.AddPopulationWriter<VoronoiDataWriter>();
@@ -712,7 +729,7 @@ public:
      * Simulation internal void using the
      * Cell Vertex model.
      */
-    void xTestVertexBasedInternalVoid()
+    void TestVertexBasedInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Vertex/Pre-void";
 
@@ -735,6 +752,7 @@ public:
         // Create tissue
         VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
         cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<BoundaryCellWriter>();
 
         // Create simulation from cell population
         OffLatticeSimulation<2> simulator(cell_population);

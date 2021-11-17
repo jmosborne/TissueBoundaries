@@ -57,7 +57,6 @@ void BoundaryCellWriter<ELEMENT_DIM, SPACE_DIM>::VisitCell(CellPtr pCell, Abstra
 {
     unsigned cell_id = pCell->GetCellId();
     double isBoundary = pCell->GetCellData()->GetItem("is_boundary");
-
     unsigned location_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
     *this->mpOutStream << " " << cell_id << " " << location_index << " " << isBoundary;
 
