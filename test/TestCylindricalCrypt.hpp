@@ -33,6 +33,7 @@
 #include "OnLatticeSimulation.hpp"
 
 #include "NagaiHondaForce.hpp"
+#include "BoundaryForce.hpp"
 #include "RepulsionForce.hpp"
 #include "DiffusionCaUpdateRule.hpp"
 #include "VolumeConstraintPottsUpdateRule.hpp"
@@ -43,6 +44,7 @@
 #include "VolumeTrackingModifier.hpp"
 #include "WntConcentrationModifier.hpp"
 #include "VertexBoundaryRefinementModifier.hpp"
+#include "SmoothVertexEdgesModifier.hpp"
 
 #include "PlaneBasedCellKiller.hpp"
 
@@ -61,10 +63,12 @@
 static const double M_END_STEADY_STATE = 1; //100
 static const double M_END_TIME = 500; //1100
 static const double M_DT_TIME = 0.005;
-static const double M_SAMPLE_TIME = 20;
+static const double M_SAMPLE_TIME = 200;
 static const double M_CRYPT_DIAMETER = 6; //16
-static const double M_CRYPT_LENGTH = 12;
+static const double M_CRYPT_LENGTH = 6;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
+static const double M_BOUNDARY_FORCE_STRENGTH = 50.0;
+static const double M_BOUNDARY_FORCE_CUTOFF = 1.0;
 
 static const std::string M_HEAD_FOLDER = "CylindricalCrypt";
 
@@ -114,9 +118,9 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Overlapping Spheres model.
      */
-    void NoTestNodeBasedCrypt()
+    void noTestNodeBasedCrypt()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Node";
+        std::string output_directory = M_HEAD_FOLDER + "/Node/Default";
 
         // Create a simple mesh
         HoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0);
@@ -170,10 +174,168 @@ public:
         p_linear_force->SetCutOffLength(cut_off_length);
         simulator.AddForce(p_linear_force);
 
-        // Solid base boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
+
+        // Sloughing killer
+        MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+        simulator.AddCellKiller(p_killer);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Mark Ancestors
+        simulator.SetEndTime(M_END_TIME);
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        // Run simulation to new end time
+        simulator.Solve();
+
+        // Clear memory
+        delete p_mesh;
+    }
+
+    void noTestNodeBasedLargeCutoffCrypt()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCutoff";
+
+        // Create a simple mesh
+        HoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0);
+        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+
+        double cut_off_length = 2.0; //this is larger than the default
+
+        // Convert this to a Cylindrical2dNodesOnlyMesh
+        Cylindrical2dNodesOnlyMesh* p_mesh = new Cylindrical2dNodesOnlyMesh(M_CRYPT_DIAMETER);
+        p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh,2.0); // So factor of 16
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(p_mesh->GetNumNodes(), cells, M_PI*0.25,M_CONTACT_INHIBITION_LEVEL); // mature volume: M_PI*0.25 as r=0.5
+
+        // Create a node-based cell population
+        NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        for (unsigned index = 0; index < cell_population.rGetMesh().GetNumNodes(); index++)
+        {
+            cell_population.rGetMesh().GetNode(index)->SetRadius(0.5);
+        }
+
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        p_linear_force->SetCutOffLength(cut_off_length);
+        simulator.AddForce(p_linear_force);
+
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
+
+        // Sloughing killer
+        MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+        simulator.AddCellKiller(p_killer);
+
+        // Run simulation
+        simulator.Solve();
+
+        // Mark Ancestors
+        simulator.SetEndTime(M_END_TIME);
+        simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+
+        // Run simulation to new end time
+        simulator.Solve();
+
+        // Clear memory
+        delete p_mesh;
+    }
+
+    void noTestNodeBasedSmallCutoffCrypt()
+    {
+        std::string output_directory = M_HEAD_FOLDER + "/Node/SmallCutoff";
+
+        // Create a simple mesh
+        HoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0);
+        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+
+        double cut_off_length = 1.0; //this is smaller than the default
+
+        // Convert this to a Cylindrical2dNodesOnlyMesh
+        Cylindrical2dNodesOnlyMesh* p_mesh = new Cylindrical2dNodesOnlyMesh(M_CRYPT_DIAMETER);
+        p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh,2.0); // So factor of 16
+
+        // Create cells
+        std::vector<CellPtr> cells;
+        GenerateCells(p_mesh->GetNumNodes(), cells, M_PI*0.25,M_CONTACT_INHIBITION_LEVEL); // mature volume: M_PI*0.25 as r=0.5
+
+        // Create a node-based cell population
+        NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
+        cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+        cell_population.AddCellWriter<CellVolumesWriter>();
+        cell_population.AddCellWriter<CellIdWriter>();
+        cell_population.AddCellWriter<CellAncestorWriter>();
+
+        for (unsigned index = 0; index < cell_population.rGetMesh().GetNumNodes(); index++)
+        {
+            cell_population.rGetMesh().GetNode(index)->SetRadius(0.5);
+        }
+
+
+        // Create simulation from cell population
+        OffLatticeSimulation<2> simulator(cell_population);
+        simulator.SetDt(M_DT_TIME);
+        simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+        simulator.SetEndTime(M_END_STEADY_STATE);
+        simulator.SetOutputDirectory(output_directory);
+        simulator.SetOutputDivisionLocations(true);
+        simulator.SetOutputCellVelocities(true);
+
+        //Add Wnt concentration modifier
+        MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+        p_wnt_modifier->SetType(LINEAR);
+        p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+        simulator.AddSimulationModifier(p_wnt_modifier);
+
+        // Add volume tracking modifier
+        MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+        simulator.AddSimulationModifier(p_modifier);
+
+        // Create a force law and pass it to the simulation
+        MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
+        p_linear_force->SetMeinekeSpringStiffness(50.0);
+        p_linear_force->SetCutOffLength(cut_off_length);
+        simulator.AddForce(p_linear_force);
+
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -204,7 +366,7 @@ public:
     /*
      * == No ghosts Ininite VT == 
      */
-    void noTestMeshBasedNoGhostsInfiniteVtCrypt() throw (Exception)
+    void noTestMeshBasedNoGhostsInfiniteVtCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/Infinite";
 
@@ -254,10 +416,10 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
 
-        // Solid base boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -278,7 +440,7 @@ public:
     /*
      * == No ghosts Finite VT == 
      */
-    void noTestMeshBasedNoGhostsFiniteVtCrypt() throw (Exception)
+    void noTestMeshBasedNoGhostsFiniteVtCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/Finite";
 
@@ -327,11 +489,11 @@ public:
         MAKE_PTR(GeneralisedLinearSpringForce<2>, p_linear_force);
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
-
-        // Solid base boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -349,7 +511,7 @@ public:
         simulator.Solve();
     }
 
-    void noTestMeshBasedGhostsCrypt()
+    void TestMeshBasedGhostsCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/Ghosts";
 
@@ -401,10 +563,10 @@ public:
         p_linear_force->SetMeinekeSpringStiffness(50.0);
         simulator.AddForce(p_linear_force);
 
-        // Solid base boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, (M_CRYPT_LENGTH-0.5)*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -427,9 +589,9 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Cell Vertex model. With smoothed edges.
      */
-    void noTestVertexBasedSmoothedCrypt()
+    void noTestVertexBasedSmoothCrypt()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Smoothed";
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Smooth";
 
         // Create mesh
         bool is_flat_bottom = true; // only different here with jagged is this.
@@ -467,6 +629,10 @@ public:
         MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
         simulator.AddSimulationModifier(p_modifier);
 
+        // Refine the edges on boundary to get smooth edges
+        MAKE_PTR(SmoothVertexEdgesModifier<2>, smooth_edge_modifier);
+        simulator.AddSimulationModifier(smooth_edge_modifier);
+
         // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
         MAKE_PTR(NagaiHondaForce<2>, p_force);
         p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
@@ -474,11 +640,11 @@ public:
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
         p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
         simulator.AddForce(p_force);
-
-        // Solid base Boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -498,7 +664,7 @@ public:
         Warnings::Instance()->QuietDestroy();
     }
 
-    void TestVertexBasedJaggedCrypt()
+    void noTestVertexBasedJaggedCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
 
@@ -545,11 +711,11 @@ public:
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
         p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
         simulator.AddForce(p_force);
-
-        // Solid base Boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -580,7 +746,7 @@ public:
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved";
 
         // Create mesh
-        CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, true);
+        CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
         Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
         p_mesh->SetCellRearrangementThreshold(0.1);
 
@@ -625,11 +791,11 @@ public:
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
         p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
         simulator.AddForce(p_force);
-
-        // Solid base Boundary condition
-        MAKE_PTR_ARGS(PlaneBoundaryCondition<2>, p_bcs, (&cell_population, zero_vector<double>(2), -unit_vector<double>(2,1)));
-        p_bcs->SetUseJiggledNodesOnPlane(true);
-        simulator.AddCellPopulationBoundaryCondition(p_bcs);
+        
+        MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+        p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+        p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+        simulator.AddForce(p_boundary_force);
 
         // Sloughing killer
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
@@ -651,3 +817,4 @@ public:
 };
 
 #endif /* TESTCYLINDRICALCRYPT_HPP_ */
+
