@@ -33,6 +33,11 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+
+// ------   NOTE!!!   ----
+// Must be used in conjuction with VoidAreaModifier or CircularityCalcModifier, as that is where this property is set.
+// -----------------------
+
 #include "BoundaryCellWriter.hpp"
 #include "AbstractCellPopulation.hpp"
 #include "Debug.hpp"

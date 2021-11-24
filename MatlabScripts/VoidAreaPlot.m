@@ -8,14 +8,27 @@ clear all;
 %%
 % Import data
 
-meshNoGhostRaw = importdata('Mesh/NoGhosts/Void/voidArea.dat');
-meshNoGhostData = meshNoGhostRaw.data;
+meshNoGhostInfRaw = importdata('Mesh/NoGhosts/InfiniteVT/voidArea.dat');
+meshNoGhostInfData = meshNoGhostInfRaw.data;
+
+meshNoGhostFinRaw = importdata('Mesh/NoGhosts/FiniteVT/voidArea.dat');
+meshNoGhostFinData = meshNoGhostFinRaw.data;
 
 meshGhostRaw = importdata('Mesh/Ghosts/Void/voidArea.dat');
 meshGhostData = meshGhostRaw.data;
 
-NodeRaw = importdata('Node/DefaultCutOff/voidArea.dat');
-NodeData = NodeRaw.data;
+%%%
+
+NodeDefaultRaw = importdata('Node/DefaultCutOff/Post-Void/voidArea.dat');
+NodeDefaultData = NodeDefaultRaw.data;
+
+NodeLargeRaw = importdata('Node/LargeCutoff/Post-Void/voidArea.dat');
+NodeLargeData = NodeLargeRaw.data;
+
+NodeDmallRaw = importdata('Node/SmallCutoff/Post-Void/voidArea.dat');
+NodeSmallData = NodeDmallRaw.data;
+
+%%%
 
 VertexJaggedRaw = importdata('Vertex/Jagged/voidArea.dat');
 VertexJaggedData = VertexJaggedRaw.data;
@@ -23,16 +36,25 @@ VertexJaggedData = VertexJaggedRaw.data;
 VertexSmoothRaw = importdata('Vertex/Smooth/voidArea.dat');
 VertexSmoothData = VertexSmoothRaw.data;
 
+VertexCurvedRaw = importdata('Vertex/Curved/voidArea.dat');
+VertexCurvedData = VertexCurvedRaw.data;
+
 %%
 % Clean up and organise data
 
-timeData = meshNoGhostData(:,1);
+timeData = meshNoGhostInfData(:,1);
 
-meshNoGhostVoidArea = meshNoGhostData(:,2);
-meshGhostVoidArea = meshGhostData(:,2);
-NodeVoidArea = NodeData(:,2);
-VertexJaggedVoidArea = VertexJaggedData(:,2);
-VertexSmoothVoidArea = VertexSmoothData(:,2);
+meshNoGhostInfArea = meshNoGhostInfData(:,2);
+meshNoGhostFinArea = meshNoGhostFinData(:,3);
+meshGhostArea = meshGhostData(:,3);
+
+NodeDefaultArea = NodeDefaultData(:,2);
+NodeLargeArea = NodeLargeData(:,2);
+NodeSmallArea = NodeSmallData(:,2);
+
+VertexJaggedArea = VertexJaggedData(:,3);
+VertexSmoothArea = VertexSmoothData(:,3);
+VertexCurvedArea = VertexCurvedData(:,3);
 
 %%
 % Plot the void area
@@ -40,15 +62,21 @@ VertexSmoothVoidArea = VertexSmoothData(:,2);
 mLineWidth = 2.5;
 
 hold on;
+plot(timeData,VertexJaggedArea,'-','linewidth',1.5)
+plot(timeData,VertexSmoothArea,'-','linewidth',1.5)
+plot(timeData,VertexCurvedArea,'-','linewidth',1.5)
 
-plot(timeData,meshNoGhostVoidArea,'linewidth',mLineWidth)
-plot(timeData,meshGhostVoidArea,'linewidth',mLineWidth)
-plot(timeData,NodeVoidArea,'--','linewidth',mLineWidth)
-plot(timeData,VertexJaggedVoidArea,':','linewidth',mLineWidth)
-plot(timeData,VertexSmoothVoidArea,':','linewidth',mLineWidth)
+plot(timeData,NodeDefaultArea,':','linewidth',2)
+plot(timeData,NodeLargeArea,':','linewidth',2)
+plot(timeData,NodeSmallArea,':','linewidth',2)
 
+plot(timeData,meshGhostArea,'--','linewidth',1.5)
+plot(timeData,meshNoGhostInfArea,'--','linewidth',1.5)
+plot(timeData,meshNoGhostFinArea,'--','linewidth',1.5)
 hold off;
-legend('Mesh','Mesh Ghosts','Node','Vertex Jagged','Vertex Smooth','fontsize',14,'interpreter','Latex')
+
+legend('Vertex Jagged','Vertex Smooth','Vertex Curved','Node Default','Node Large','Node Small','Mesh Ghosts','Mesh Infinite','Mesh Finite','fontsize',12,'interpreter','Latex')
+
 xlabel('Time (seconds)','fontsize',14,'interpreter','Latex')
 ylabel('Void Area (CD^2)','fontsize',14,'interpreter','Latex')
 title('Void Area with Domain scaling of 0.8','fontsize',16,'interpreter','Latex')

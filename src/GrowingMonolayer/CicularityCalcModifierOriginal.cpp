@@ -65,6 +65,9 @@ void CicularityCalcModifier<DIM>::SetOutputDirectory(std::string outputDirectory
     OutputFileHandler output_file_handler(mOutputDirectory+"/", false);
     out_stream locationFile = output_file_handler.OpenOutputFile("CicularityCalc.dat");
     *locationFile << "time \t";
+    // *locationFile << "Pixel_Area" << "\t";
+    // *locationFile << "Pixel_Perimiter" << "\t";
+    // *locationFile << "Pixel_Circularity" << "\t";
     *locationFile << "Cell_Area" << "\t";
     *locationFile << "Cell_Perimiter" << "\t";
     *locationFile << "Cell_Circularity" << "\t";
@@ -354,10 +357,8 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
             }
 
-
-
-
             // Now we have the set of boundary nodes, find the circularity
+
             double x_centre = 0.0;
             double y_centre = 0.0;
             unsigned number_of_boundary_cells = boundary_cells.size();
@@ -455,22 +456,129 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                 xjj = x_boundary_c[jj];
                 yjj = y_boundary_c[jj];
 
-                *locationFile_2 << xii << "\t";
-                *locationFile_2 << yii << "\t";
-                *locationFile_2 << xjj << "\t";
-                *locationFile_2 << yjj << "\t";
-
                 tissue_area = tissue_area + 0.5*(xii*yjj-xjj*yii);
                 tissue_perimiter = tissue_perimiter + sqrt(pow(xii-xjj,2) + pow(yii-yjj,2));
 
             }
+            
+
+            // // calculate the perimiter of the tissue
+            // for(unsigned pixel_i = 2; pixel_i<pixel_tissue_width-2; pixel_i++)
+            // {
+            //     for(unsigned pixel_j = 2; pixel_j<pixel_tissue_depth-2; pixel_j++)
+            //     {
+            //         if(pixel_grid[pixel_i][pixel_j]==1)
+            //         {
+            //             double number_of_neighs_1  = pixel_grid[pixel_i-1][pixel_j] + pixel_grid[pixel_i+1][pixel_j] + pixel_grid[pixel_i][pixel_j-1] + pixel_grid[pixel_i][pixel_j+1];
+
+            //             if(number_of_neighs_1 < 4)
+            //             {
+            //                 if(number_of_neighs_1 == 0)
+            //                 {
+            //                     int number_of_neighs_2  = pixel_grid[pixel_i-1][pixel_j-1] + pixel_grid[pixel_i+1][pixel_j-1] + pixel_grid[pixel_i-1][pixel_j+1] + pixel_grid[pixel_i+1][pixel_j+1];
+            //                     if(number_of_neighs_2 > 0)
+            //                     {
+            //                         pixel_perimiter = pixel_perimiter + 4*separation_between_pixels;
+            //                     }
+            //                 }
+            //                 else if(number_of_neighs_1 == 1)
+            //                 {
+            //                     // PRINT_2_VARIABLES(number_of_neighs_1,pixel_perimiter);
+
+            //                     pixel_perimiter = pixel_perimiter + 3*separation_between_pixels;
+            //                 }
+            //                 else if(number_of_neighs_1 == 2)
+            //                 {
+            //                     // PRINT_2_VARIABLES(number_of_neighs_1,pixel_perimiter);
+
+            //                     pixel_perimiter = pixel_perimiter + 2*separation_between_pixels;
+            //                 }
+            //                 else if(number_of_neighs_1 == 3)
+            //                 {
+            //                     // PRINT_2_VARIABLES(number_of_neighs_1,pixel_perimiter);
+                                
+            //                     pixel_perimiter = pixel_perimiter + separation_between_pixels;
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
 
         }
 
+
+
+        // if(bool(dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation)))
+        // {
+
+        //     VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
+        //     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
+
+        //     for (typename VertexMesh<DIM,DIM>::VertexElementIterator elem_iter = p_mesh->GetElementIteratorBegin();
+        //         elem_iter != p_mesh->GetElementIteratorEnd();
+        //         ++elem_iter)
+        //     {
+        //         //unsigned elem_index = elem_iter->GetIndex();
+
+        //         //unsigned num_nodes = elem_iter->GetNumNodes();
+        //         for (unsigned node_local_index = 0; node_local_index < elem_iter->GetNumNodes(); node_local_index++)
+        //         {
+        //             unsigned next_node_local_index = (node_local_index+1) % (elem_iter->GetNumNodes());
+
+        //             //PRINT_3_VARIABLES(node_local_index,next_node_local_index,num_nodes);
+
+        //             unsigned node_global_index = elem_iter->GetNodeGlobalIndex(node_local_index);
+        //             unsigned next_node_global_index = elem_iter->GetNodeGlobalIndex(next_node_local_index);
+
+        //             Node<DIM>* p_node_a = p_mesh->GetNode(node_global_index);
+        //             Node<DIM>* p_node_b = p_mesh->GetNode(next_node_global_index);
+                                    
+        //             if (p_node_a->IsBoundaryNode() && p_node_b->IsBoundaryNode())
+        //             {
+        //                 // Find the sets of elements containing nodes A and B
+        //                 std::set<unsigned> node_a_elem_indices = p_node_a->rGetContainingElementIndices();
+        //                 std::set<unsigned> node_b_elem_indices = p_node_b->rGetContainingElementIndices();
+
+        //                 // Find common elements
+        //                 std::set<unsigned> shared_elements;
+        //                 std::set_intersection(node_a_elem_indices.begin(),
+        //                         node_a_elem_indices.end(),
+        //                         node_b_elem_indices.begin(),
+        //                         node_b_elem_indices.end(),
+        //                         std::inserter(shared_elements, shared_elements.begin()));
+
+        //                 assert(shared_elements.size()>0); //otherwise not in the same element at all 
+
+        //                 if(shared_elements.size() == 1)
+        //                 {
+        //                     // Here we have a boundary edge so add new node if needed.
+        //                     c_vector<double,DIM> edge = p_mesh->GetVectorFromAtoB(p_node_a->rGetLocation(),p_node_b->rGetLocation());
+        //                     tissue_perimiter = tissue_perimiter + norm_2(edge);
+        //                 }
+        //             }
+        //         }
+        //     }
+        
+        // }
+        
+        // for (typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
+        //     cell_iter != rCellPopulation.End();
+        //     ++cell_iter)
+        // {
+        //     // Get the volume of this cell
+        //     double cell_volume = rCellPopulation.GetVolumeOfCell(*cell_iter);
+
+        //     tissue_area = tissue_area + cell_volume;
+        // }
+
+
         OutputFileHandler output_file_handler(mOutputDirectory+"/", false);
         out_stream locationFile = output_file_handler.OpenOutputFile("CicularityCalc.dat", std::ios::app);
-        // SimulationTime* p_time = SimulationTime::Instance();
+        SimulationTime* p_time = SimulationTime::Instance();
         *locationFile << p_time->GetTime() << "\t";
+        // *locationFile << pixel_area << "\t";
+        // *locationFile << pixel_perimiter << "\t";
+        // *locationFile << 4*3.141592653589793*pixel_area/(pixel_perimiter*pixel_perimiter) << "\t";
         *locationFile << tissue_area << "\t";
         *locationFile << tissue_perimiter << "\t";
         *locationFile << 4*3.141592653589793*tissue_area/(tissue_perimiter*tissue_perimiter) << "\t";

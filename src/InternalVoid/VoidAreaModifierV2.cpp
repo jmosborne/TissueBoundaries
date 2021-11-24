@@ -33,7 +33,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "VoidAreaModifier.hpp"
+#include "VoidAreaModifierV2.hpp"
 
 #include "NodeBasedCellPopulation.hpp"
 
@@ -48,7 +48,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 template<unsigned DIM>
-VoidAreaModifier<DIM>::VoidAreaModifier()
+VoidAreaModifierV2<DIM>::VoidAreaModifierV2()
     : AbstractCellBasedSimulationModifier<DIM>(),
     mOutputDirectory(""),
     mCutoff(1.5),
@@ -58,7 +58,7 @@ VoidAreaModifier<DIM>::VoidAreaModifier()
 }
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::SetOutputDirectory(std::string outputDirectory)
+void VoidAreaModifierV2<DIM>::SetOutputDirectory(std::string outputDirectory)
 {
 	mOutputDirectory = outputDirectory;
 
@@ -80,19 +80,19 @@ void VoidAreaModifier<DIM>::SetOutputDirectory(std::string outputDirectory)
 }
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::SetCutoff(double cutoff)
+void VoidAreaModifierV2<DIM>::SetCutoff(double cutoff)
 {
 	mCutoff = cutoff;
 }
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::SetPixelSeparation(double pixelSeparation)
+void VoidAreaModifierV2<DIM>::SetPixelSeparation(double pixelSeparation)
 {
 	mPixelSeparation = pixelSeparation;
 }
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::SetPlotPixelContour(bool plotPixelContour)
+void VoidAreaModifierV2<DIM>::SetPlotPixelContour(bool plotPixelContour)
 {
 	mPlotPixelContour = plotPixelContour;
 }
@@ -103,17 +103,17 @@ void VoidAreaModifier<DIM>::SetPlotPixelContour(bool plotPixelContour)
 // }
 
 template<unsigned DIM>
-VoidAreaModifier<DIM>::~VoidAreaModifier()
+VoidAreaModifierV2<DIM>::~VoidAreaModifierV2()
 {
 }
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM>& rCellPopulation)
+void VoidAreaModifierV2<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM>& rCellPopulation)
 {
 }
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<DIM>& rCellPopulation)
+void VoidAreaModifierV2<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<DIM>& rCellPopulation)
 {
     if(DIM == 2)
     {   
@@ -618,7 +618,7 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
                     }
                 }
 
-
+                // This is only infinitVT
                 if((bool(dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))) && mPlotPixelContour==true)
                 {
                     MeshBasedCellPopulation<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
@@ -682,6 +682,8 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
                     }
 
                 }
+
+
                 else if((bool(dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation))) )
                 {
                 // Iterate over cell population
@@ -700,6 +702,7 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
             }
 
         }
+
         *locationFile_3 << "\n";
         locationFile_3->close();
 
@@ -747,7 +750,7 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
 
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::SetupSolve(AbstractCellPopulation<DIM>& rCellPopulation, std::string outputDirectory)
+void VoidAreaModifierV2<DIM>::SetupSolve(AbstractCellPopulation<DIM>& rCellPopulation, std::string outputDirectory)
 {
     /*
      * We must update CellData in SetupSolve(), otherwise it will not have been
@@ -760,18 +763,18 @@ void VoidAreaModifier<DIM>::SetupSolve(AbstractCellPopulation<DIM>& rCellPopulat
 
 
 template<unsigned DIM>
-void VoidAreaModifier<DIM>::OutputSimulationModifierParameters(out_stream& rParamsFile)
+void VoidAreaModifierV2<DIM>::OutputSimulationModifierParameters(out_stream& rParamsFile)
 {
     // No parameters to output, so just call method on direct parent class
     AbstractCellBasedSimulationModifier<DIM>::OutputSimulationModifierParameters(rParamsFile);
 }
 
 // Explicit instantiation
-template class VoidAreaModifier<1>;
-template class VoidAreaModifier<2>;
-template class VoidAreaModifier<3>;
+template class VoidAreaModifierV2<1>;
+template class VoidAreaModifierV2<2>;
+template class VoidAreaModifierV2<3>;
 
 // Serialization for Boost >= 1.36
 #include "SerializationExportWrapperForCpp.hpp"
-EXPORT_TEMPLATE_CLASS_SAME_DIMS(VoidAreaModifier)
+EXPORT_TEMPLATE_CLASS_SAME_DIMS(VoidAreaModifierV2)
 
