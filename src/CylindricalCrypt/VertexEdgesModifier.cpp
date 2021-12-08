@@ -74,6 +74,24 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
     VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
 
+    /*
+    *        |                              |
+    *        |                              |
+    *        oB                             |
+    *       /  \                            |
+    *      /    \           ---->           |
+    *   Ao|--rm--|oC                        oB
+    *   /          \                        /\
+    *  /            \                      /  \
+    *
+    *   rm = max seperation between vertex_A and vertex_C.
+    *   if |R_vertex_A - R_vertex_C| <= rm, then we 
+    *   delete both vertex_A and Vertex_C and move vertex_B
+    *   to their midpoint. 
+    */
+    double distanceBetweenVerteciesThreshold = 0.075;
+    double distanceToCommonVertexThreshold = 0.20;
+
     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
         node_iter != p_mesh->GetNodeIteratorEnd();
         ++node_iter)
@@ -99,7 +117,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                     {
                         c_vector<double, DIM> r_node_iter = node_iter->rGetLocation();
                         c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
-                        if(norm_2(p_mesh->GetVectorFromAtoB(r_node_iter,r_neighbour)) < 0.25) // 0.15 is arbitrary...    
+                        if(norm_2(p_mesh->GetVectorFromAtoB(r_node_iter,r_neighbour)) < distanceToCommonVertexThreshold) 
                         {
                             boundary_neighbours.push_back(neighbour_index);
                         }
@@ -116,7 +134,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                     c_vector<double, DIM> r_neighbour_1 = p_neighbour_1->rGetLocation();
                     c_vector<double, DIM> r_neighbour_2 = p_neighbour_2->rGetLocation();
 
-                    if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < 0.1) // 0.05 is arbitrary...    
+                    if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                     {
                         // Delete neighbour 1
                         std::set<unsigned> element_index_set_1 = p_neighbour_1->rGetContainingElementIndices();
@@ -125,33 +143,126 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                         p_element_1->DeleteNode(p_element_1->GetNodeLocalIndex(boundary_neighbours[0]));
                         p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[0]);
 
-                        // // Delete neighbour 2
+                        // Delete neighbour 2
                         std::set<unsigned> element_index_set_2 = p_neighbour_2->rGetContainingElementIndices();
                         unsigned elem_index_2 = (*element_index_set_2.begin());
                         VertexElement<DIM,DIM>* p_element_2 = p_mesh->GetElement(elem_index_2);
                         p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(boundary_neighbours[1]));
                         p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[1]);
 
-                        // Delete internal node
-                        // std::set<unsigned> element_index_set_2 = p_node->rGetContainingElementIndices();
-                        // unsigned elem_index_2 = (*element_index_set_2.begin());
-                        // VertexElement<DIM,DIM>* p_element_2 = p_mesh->GetElement(elem_index_2);
-                        // p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(node_index));
-                        // p_mesh->DeleteNodePriorToReMesh(node_index);
-
                         // Move node to where the other 2 used to be:
                         p_node->rGetModifiableLocation() = r_neighbour_1 + 0.5 * p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2);
+                    }
+                }
+            }
+        }
+    }
 
-                        // p_mesh->PerformNodeMerge(p_node, p_neighbour_2);
-                        // p_mesh->RemoveDeletedNodes();
+    /*
+    *        |                           |
+    *        |                           |
+    *        oB                          |
+    *       /|                           oB
+    *     Ao |           ---->          /|
+    *    /   |                         / |
+    *   /    |                        /  |
+    *  /     oC                      /   oC
+    *
+    *   if vertex_A intersects edge defined by vertex_B-vertex_C
+    *   then we delete vertex_A and move vertex_B to the midpoint
+    *   of vertex_A-vertex_B
+    */
+    double distanceToEdgeThreshold = 0.05;
+
+    for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
+        node_iter != p_mesh->GetNodeIteratorEnd();
+        ++node_iter)
+    {
+        if (node_iter->IsBoundaryNode())
+        {
+            std::set<unsigned> containing_element_indices = node_iter->rGetContainingElementIndices();
+            if(containing_element_indices.size() == 2)
+            {
+                unsigned node_index = node_iter->GetIndex();
+                std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+                
+                std::vector<unsigned> boundary_neighbours;
+                for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+                    neighbour_iter != node_neighbours.end();
+                    ++neighbour_iter)
+                {
+                    unsigned neighbour_index = *neighbour_iter;
+                    Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+                    std::set<unsigned> element_index_set_n = p_neighbour_node->rGetContainingElementIndices();
+
+                    if(p_neighbour_node->IsBoundaryNode() && (element_index_set_n.size()==1) )
+                    {
+                        c_vector<double, DIM> r_node_iter = node_iter->rGetLocation();
+                        c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
+                        
+                        boundary_neighbours.push_back(neighbour_index);
                     }
                 }
 
-            }
+                if(boundary_neighbours.size() == 2)
+                {
+                    Node<DIM>* p_neighbour_1 = p_mesh->GetNode(boundary_neighbours[0]);
+                    Node<DIM>* p_neighbour_2 = p_mesh->GetNode(boundary_neighbours[1]);
+                    Node<DIM>* p_node = p_mesh->GetNode(node_index);
 
+                    c_vector<double, DIM> r_node = p_node->rGetLocation();
+                    c_vector<double, DIM> r_neighbour_1 = p_neighbour_1->rGetLocation();
+                    c_vector<double, DIM> r_neighbour_2 = p_neighbour_2->rGetLocation();
+                    
+                    if(norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_2)) < norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_1)) )
+                    {
+                        // p_neighbour_2 is closer to p_node, so check if p_neighbour_2 intersects the edge p_node-p_neighbour_1
+
+                        double numerator_signed = (r_neighbour_1[0] - r_node[0])*(r_node[1] - r_neighbour_2[1]) - (r_node[0] - r_neighbour_2[0])*(r_neighbour_1[1] - r_node[1]);
+                        double numerator = sqrt(numerator_signed*numerator_signed);
+                        double denominator = sqrt((r_neighbour_1[0] - r_node[0])*(r_neighbour_1[0] - r_node[0]) + (r_neighbour_1[1] - r_node[1])*(r_neighbour_1[1] - r_node[1]));
+                        
+                        double distance_p_2_to_edge = numerator/denominator;
+
+                        if(distance_p_2_to_edge < distanceToEdgeThreshold)
+                        {
+                            std::set<unsigned> element_index_set_2 = p_neighbour_2->rGetContainingElementIndices();
+                            unsigned elem_index_2 = (*element_index_set_2.begin());
+                            VertexElement<DIM,DIM>* p_element_2 = p_mesh->GetElement(elem_index_2);
+                            p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(boundary_neighbours[1]));
+                            p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[1]);
+
+                            p_node->rGetModifiableLocation() = r_neighbour_2;
+
+                        }
+                    }
+                    
+                    else if(norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_1)) < norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_2)))
+                    {
+                        // p_neighbour_1 is closer to p_node, so check if it intersects the edge p_node-p_neighbour_2
+
+                        double numerator_signed = (r_neighbour_2[0] - r_node[0])*(r_node[1] - r_neighbour_1[1]) - (r_node[0] - r_neighbour_1[0])*(r_neighbour_2[1] - r_node[1]);
+                        double numerator = sqrt(numerator_signed*numerator_signed);
+                        double denominator = sqrt((r_neighbour_2[0] - r_node[0])*(r_neighbour_2[0] - r_node[0]) + (r_neighbour_2[1] - r_node[1])*(r_neighbour_2[1] - r_node[1]));
+                        
+                        double distance_p_1_to_edge = numerator/denominator;
+
+                        if(distance_p_1_to_edge < distanceToEdgeThreshold)
+                        {
+                            std::set<unsigned> element_index_set_1 = p_neighbour_1->rGetContainingElementIndices();
+                            unsigned elem_index_1 = (*element_index_set_1.begin());
+                            VertexElement<DIM,DIM>* p_element_1 = p_mesh->GetElement(elem_index_1);
+                            p_element_1->DeleteNode(p_element_1->GetNodeLocalIndex(boundary_neighbours[0]));
+                            p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[0]);
+
+                            p_node->rGetModifiableLocation() = r_neighbour_1;
+                        }
+                    }
+                }
+            }
         }
-          
     }
+
     p_mesh->ReMesh();
     
 }

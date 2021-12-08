@@ -749,7 +749,7 @@ public:
 
         RandomNumberGenerator::Instance()->Reseed(3);
 
-        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved";
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved_test_2";
 
         // Create mesh
         CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
