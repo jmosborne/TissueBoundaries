@@ -218,7 +218,7 @@ private:
             p_cell->SetBirthTime(birth_time);
 
             // Set Target Area so dont need to use a growth model in vertex simulations
-            p_cell->GetCellData()->SetItem("target area", 1.0);
+            p_cell->GetCellData()->SetItem("target area", sqrt(3.0)/2.0);
 
             rCells.push_back(p_cell);
         }
@@ -255,6 +255,9 @@ public:
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells, M_PI*0.25,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: M_PI*0.25 as r=0.5
+        /* If want to make default node the same size as mesh, need to set the mature volume to around
+         * 0.92, r\approx 0.52.
+         */
 
         // Create a node-based cell population
         NodeBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -306,7 +309,7 @@ public:
      * Cut-off = 2.0
      */
 
-    void TestNodeBasedLargeCutoffGrowingMonolayer()
+    void noTestNodeBasedLargeCutoffGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCutoff";
 
@@ -377,7 +380,7 @@ public:
      * Cut-off = 1.0
      */
 
-    void TestNodeBasedSmallCutoffGrowingMonolayer()
+    void noTestNodeBasedSmallCutoffGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/SmallCutoff";
 
@@ -449,7 +452,7 @@ public:
      * Simulate a growing monolayer using the
      * Voronoi Tessellation model.
      */
-    void TestMeshBasedGhostsGrowingMonolayer()
+    void noTestMeshBasedGhostsGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/Ghosts";
 
@@ -471,8 +474,9 @@ public:
         std::vector<CellPtr> cells;
         GenerateCells(location_indices.size(),cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
+        // To make same size as node default, decrease mature volume to around 0.8
 
-        // // Create tissue
+        // Create tissue
         MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, location_indices);
         // MeshBasedCellPopulationWithGhostNodes<2> cell_population(*p_mesh, cells, std::vector<unsigned>(), false, 15 , 1, 1);
 
@@ -522,7 +526,7 @@ public:
 
     }
 
-    void TestMeshBasedNoGhostsInfiniteVTGrowingMonolayer()
+    void noTestMeshBasedNoGhostsInfiniteVTGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/InfiniteVT";
 
@@ -539,6 +543,7 @@ public:
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
+        // Note: Tissue shrinks without proliferation due to boundary effects
 
         // Create tissue
         MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -587,7 +592,7 @@ public:
 
     }
     
-    void TestMeshBasedNoGhostsFiniteVTGrowingMonolayer()
+    void noTestMeshBasedNoGhostsFiniteVTGrowingMonolayer()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/FiniteVT";
 
@@ -607,6 +612,7 @@ public:
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); // mature volume: sqrt(3.0)/2.0
+        // Note: Tissue shrinks without proliferation due to boundary effects
 
         // Create tissue
         MeshBasedCellPopulation<2> cell_population(*p_mesh, cells);
@@ -656,7 +662,7 @@ public:
      * Simulate a growing monolayer using the
      * Cell Vertex model.
      */
-    void TestVertexBasedGrowingMonolayer() 
+    void noTestVertexBasedGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
 
@@ -672,7 +678,7 @@ public:
 
         // Create cells
         std::vector<CellPtr> cells;
-        GenerateCells(p_mesh->GetNumElements(), cells,1.0,M_CONTACT_INHIBITION_LEVEL,
+        GenerateCells(p_mesh->GetNumElements(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
 
         // Create tissue
@@ -724,7 +730,7 @@ public:
 
     }
 
-    void TestVertexBasedSmoothGrowingMonolayer() 
+    void noTestVertexBasedSmoothGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Smooth";
 
@@ -740,7 +746,7 @@ public:
 
         // Create cells
         std::vector<CellPtr> cells;
-        GenerateCells(p_mesh->GetNumElements(), cells,1.0,M_CONTACT_INHIBITION_LEVEL,
+        GenerateCells(p_mesh->GetNumElements(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
 
         // Create tissue
@@ -798,7 +804,7 @@ public:
 
     }
 
-    void TestVertexBasedCurvedGrowingMonolayer() 
+    void noTestVertexBasedCurvedGrowingMonolayer() 
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved";
 
@@ -814,7 +820,7 @@ public:
 
         // Create cells
         std::vector<CellPtr> cells;
-        GenerateCells(p_mesh->GetNumElements(), cells,1.0,M_CONTACT_INHIBITION_LEVEL,
+        GenerateCells(p_mesh->GetNumElements(), cells,sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
                 M_STEM_CELL_DIVISION_PROBABILITY,M_STEM_CELL_MINIMUM_DIVISION_AGE); //mature_volume = 1.0
 
         // Create tissue
