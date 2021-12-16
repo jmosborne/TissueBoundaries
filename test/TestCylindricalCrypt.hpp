@@ -45,6 +45,9 @@
 #include "WntConcentrationModifier.hpp"
 #include "VertexBoundaryRefinementModifier.hpp"
 #include "SmoothVertexEdgesModifier.hpp"
+#include "VertexEdgesModifier.hpp"
+#include "RandomDirectionVertexBasedDivisionRule.hpp"
+
 
 #include "PlaneBasedCellKiller.hpp"
 
@@ -60,12 +63,12 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 1; //100
-static const double M_END_TIME = 500; //1100
-static const double M_DT_TIME = 0.005;
-static const double M_SAMPLE_TIME = 200;
+static const double M_END_STEADY_STATE = 100; //100
+static const double M_END_TIME = 100; //1100
+static const double M_DT_TIME = 0.001;
+static const double M_SAMPLE_TIME = 1;
 static const double M_CRYPT_DIAMETER = 6; //16
-static const double M_CRYPT_LENGTH = 6;
+static const double M_CRYPT_LENGTH = 10;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
 static const double M_BOUNDARY_FORCE_STRENGTH = 50.0;
 static const double M_BOUNDARY_FORCE_CUTOFF = 1.0;
@@ -118,7 +121,7 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Overlapping Spheres model.
      */
-    void noTestNodeBasedCrypt()
+    void xTestNodeBasedCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/Default";
 
@@ -511,7 +514,7 @@ public:
         simulator.Solve();
     }
 
-    void TestMeshBasedGhostsCrypt()
+    void xTestMeshBasedGhostsCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Mesh/Ghosts";
 
@@ -589,7 +592,7 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Cell Vertex model. With smoothed edges.
      */
-    void noTestVertexBasedSmoothCrypt()
+    void xTestVertexBasedSmoothCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Smooth";
 
@@ -664,7 +667,7 @@ public:
         Warnings::Instance()->QuietDestroy();
     }
 
-    void noTestVertexBasedJaggedCrypt()
+    void xTestVertexBasedJaggedCrypt()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Vertex/Jagged";
 
@@ -741,9 +744,12 @@ public:
      * Simulate cell proliferation in the colorectal crypt using the
      * Cell Vertex model with curved edges.
      */
-    void noTestVertexBasedCurvedCrypt()
+    void TestVertexBasedCurvedCrypt()
     {
-        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved";
+
+        RandomNumberGenerator::Instance()->Reseed(3);
+
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved_test_2";
 
         // Create mesh
         CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
@@ -764,7 +770,7 @@ public:
         OffLatticeSimulation<2> simulator(cell_population);
         simulator.SetDt(M_DT_TIME);
         simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
-        simulator.SetEndTime(M_END_STEADY_STATE);
+        // simulator.SetEndTime(M_END_STEADY_STATE);
         simulator.SetOutputDirectory(output_directory);
         simulator.SetOutputDivisionLocations(true);
         simulator.SetOutputCellVelocities(true);
@@ -801,8 +807,14 @@ public:
         MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
         simulator.AddCellKiller(p_killer);
 
+        boost::shared_ptr<AbstractVertexBasedDivisionRule<2> > p_division_rule_to_set(new RandomDirectionVertexBasedDivisionRule<2>());
+        cell_population.SetVertexBasedDivisionRule(p_division_rule_to_set);
+
         // Run simulation
-        simulator.Solve();
+        // simulator.Solve();
+
+        MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
+        simulator.AddSimulationModifier(edge_modifier);
 
         // Mark Ancestors
         simulator.SetEndTime(M_END_TIME);
