@@ -1,0 +1,40 @@
+Running 1 test
+Changing directory from '/home/chaste/src/projects/TissueBoundaries/test/' to '/home/chaste/src/'.
+CWD now: /home/chaste/src
+
+
+ ***** TestCylindricalCrypt.hpp *****
+
+
+Entering TestCylindricalCrypts
+ Run number 2... 
+OS - 1
+DEBUG: SimulationTime::Instance()->GetTime() = 315.3, num_clones = 1
+OS - 1.5
+DEBUG: SimulationTime::Instance()->GetTime() = 253.645, num_clones = 1
+OS - 2
+DEBUG: SimulationTime::Instance()->GetTime() = 296.24, num_clones = 1
+Infinite VT 
+TestCylindricalCryptRunner: mesh/src/mutable/Cylindrical2dMesh.cpp:703: void Cylindrical2dMesh::UseTheseElementsToDecideMeshing(std::set<unsigned int>&): Assertion `corresponding_elements.size() == 2' failed.
+[0fb465662fef:10873] *** Process received signal ***
+[0fb465662fef:10873] Signal: Aborted (6)
+[0fb465662fef:10873] Signal code:  (-6)
+[0fb465662fef:10873] [ 0] linux-vdso.so.1(__kernel_rt_sigreturn+0x0)[0xffffbc0ef7c0]
+[0fb465662fef:10873] [ 1] /lib/aarch64-linux-gnu/libc.so.6(gsignal+0xe0)[0xffffb9b08138]
+[0fb465662fef:10873] [ 2] /lib/aarch64-linux-gnu/libc.so.6(abort+0x110)[0xffffb9af4d68]
+[0fb465662fef:10873] [ 3] /lib/aarch64-linux-gnu/libc.so.6(+0x30674)[0xffffb9b01674]
+[0fb465662fef:10873] [ 4] /lib/aarch64-linux-gnu/libc.so.6(+0x306dc)[0xffffb9b016dc]
+[0fb465662fef:10873] [ 5] ../build/optimised/TestCylindricalCryptRunner(+0x98a76c)[0xaaaadff9a76c]
+[0fb465662fef:10873] [ 6] ../build/optimised/TestCylindricalCryptRunner(+0x98ab90)[0xaaaadff9ab90]
+[0fb465662fef:10873] [ 7] ../build/optimised/TestCylindricalCryptRunner(+0x98bf80)[0xaaaadff9bf80]
+[0fb465662fef:10873] [ 8] ../build/optimised/TestCylindricalCryptRunner(+0x8ce7cc)[0xaaaadfede7cc]
+[0fb465662fef:10873] [ 9] ../build/optimised/TestCylindricalCryptRunner(+0x845780)[0xaaaadfe55780]
+[0fb465662fef:10873] [10] ../build/optimised/TestCylindricalCryptRunner(+0x84ab20)[0xaaaadfe5ab20]
+[0fb465662fef:10873] [11] ../build/optimised/TestCylindricalCryptRunner(+0x325abc)[0xaaaadf935abc]
+[0fb465662fef:10873] [12] ../build/optimised/TestCylindricalCryptRunner(+0x31ca10)[0xaaaadf92ca10]
+[0fb465662fef:10873] [13] ../build/optimised/TestCylindricalCryptRunner(+0x31fa0c)[0xaaaadf92fa0c]
+[0fb465662fef:10873] [14] ../build/optimised/TestCylindricalCryptRunner(+0x31fb98)[0xaaaadf92fb98]
+[0fb465662fef:10873] [15] ../build/optimised/TestCylindricalCryptRunner(+0x2b6c18)[0xaaaadf8c6c18]
+[0fb465662fef:10873] [16] /lib/aarch64-linux-gnu/libc.so.6(__libc_start_main+0xe8)[0xffffb9af5090]
+[0fb465662fef:10873] [17] ../build/optimised/TestCylindricalCryptRunner(+0x3190cc)[0xaaaadf9290cc]
+[0fb465662fef:10873] *** End of error message ***
