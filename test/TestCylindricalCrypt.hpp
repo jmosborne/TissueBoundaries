@@ -779,8 +779,12 @@ public:
             //     simulator.AddSimulationModifier(p_modifier);
 
             //     // Refine the edges on boundary to get smooth edges
-            //     MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
-            //     simulator.AddSimulationModifier(refinement_modifier);
+                // MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
+                // simulator.AddSimulationModifier(refinement_modifier);
+
+                // // Fix some of the edge cases which cause problems...
+                // MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
+                // simulator.AddSimulationModifier(edge_modifier);
 
             //     // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
             //     MAKE_PTR(NagaiHondaForce<2>, p_force);

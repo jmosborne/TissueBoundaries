@@ -39,8 +39,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<unsigned DIM>
 VertexBoundaryRefinementModifier<DIM>::VertexBoundaryRefinementModifier()
     : AbstractCellBasedSimulationModifier<DIM>(),
-      mMaxEdgeLength(0.25),
-      mMinEdgeLength(0.0)
+      mMaxEdgeLength(0.3),
+      mMinEdgeLength(0.05)
 {
 }
 
@@ -128,13 +128,34 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                         } 
                         else if (norm_2(edge) < mMinEdgeLength)
                         {
-                            NEVER_REACHED; // Not implemented yet
+                            // Check to make sure we don't delete a node that is a vertex, only a free boundary node
+                            if(node_a_elem_indices.size() == 2)
+                            {
+                                // Delete node
+                                std::set<unsigned> element_index_set_b = p_node_b->rGetContainingElementIndices();
+                                unsigned elem_index_b = (*element_index_set_b.begin());
+                                VertexElement<DIM,DIM>* p_element_b = p_mesh->GetElement(elem_index_b);
+                                p_element_b->DeleteNode(p_element_b->GetNodeLocalIndex(next_node_global_index));
+                                p_mesh->DeleteNodePriorToReMesh(next_node_global_index);
+                            }
+                            else if(node_b_elem_indices.size() == 2)
+                            {
+                                // Delete node
+                                std::set<unsigned> element_index_set_a = p_node_a->rGetContainingElementIndices();
+                                unsigned elem_index_a = (*element_index_set_a.begin());
+                                VertexElement<DIM,DIM>* p_element_a = p_mesh->GetElement(elem_index_a);
+                                p_element_a->DeleteNode(p_element_a->GetNodeLocalIndex(node_global_index));
+                                p_mesh->DeleteNodePriorToReMesh(node_global_index);
+                            }
+                            // NEVER_REACHED; // Not implemented yet
                         }   
                     }
                 }
             }
         }
     }
+
+    p_mesh->ReMesh();
 }
 
 
