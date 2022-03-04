@@ -180,33 +180,59 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                         c_vector<double, DIM> r_neighbour_1 = p_neighbour_1->rGetLocation();
                         c_vector<double, DIM> r_neighbour_2 = p_neighbour_2->rGetLocation();
 
-                        // PRINT_VECTOR( r_neighbour_1 );
-                        // PRINT_VECTOR( r_neighbour_2 );
-                        // PRINT_VARIABLE( norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) );
-
-                        if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
+                        // We have this:
+                        /*  
+                        *     \ (Cell) /
+                        *      \     /
+                        *       \   /
+                        *        \ /
+                        * (Cell)  o  (Cell)
+                        *       /   \
+                        *      / (v) \
+                        * ----o       o -----
+                        *
+                        */
+                        if( containing_element_indices.size() == 3 )
                         {
-                            // Delete neighbour 1
-                            std::set<unsigned> element_index_set_1 = p_neighbour_1->rGetContainingElementIndices();
-                            unsigned elem_index_1 = (*element_index_set_1.begin());
-                            VertexElement<DIM,DIM>* p_element_1 = p_mesh->GetElement(elem_index_1);
-                            p_element_1->DeleteNode(p_element_1->GetNodeLocalIndex(boundary_neighbours[0]));
-                            p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[0]);
+                            if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
+                            {
+                                p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
+                                p_node->SetAsBoundaryNode(false);
 
-                            // Delete neighbour 2
-                            std::set<unsigned> element_index_set_2 = p_neighbour_2->rGetContainingElementIndices();
-                            unsigned elem_index_2 = (*element_index_set_2.begin());
-                            VertexElement<DIM,DIM>* p_element_2 = p_mesh->GetElement(elem_index_2);
-                            p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(boundary_neighbours[1]));
-                            p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[1]);
+                                performed_edge_modifier = true;
+                            }
 
-                            // Move node to where the other 2 used to be:
-                            p_node->rGetModifiableLocation() = r_neighbour_1 + 0.5 * p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2);
+                        }
+                        else
+                        {
+                            // PRINT_VECTOR( r_neighbour_1 );
+                            // PRINT_VECTOR( r_neighbour_2 );
+                            // PRINT_VARIABLE( norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) );
 
-                            performed_edge_modifier = true;
-                            // PRINT_VECTOR(p_node->rGetModifiableLocation());
-                            // TRACE("Custom 1.1");
+                            if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
+                            {
+                                // Delete neighbour 1
+                                std::set<unsigned> element_index_set_1 = p_neighbour_1->rGetContainingElementIndices();
+                                unsigned elem_index_1 = (*element_index_set_1.begin());
+                                VertexElement<DIM,DIM>* p_element_1 = p_mesh->GetElement(elem_index_1);
+                                p_element_1->DeleteNode(p_element_1->GetNodeLocalIndex(boundary_neighbours[0]));
+                                p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[0]);
 
+                                // Delete neighbour 2
+                                std::set<unsigned> element_index_set_2 = p_neighbour_2->rGetContainingElementIndices();
+                                unsigned elem_index_2 = (*element_index_set_2.begin());
+                                VertexElement<DIM,DIM>* p_element_2 = p_mesh->GetElement(elem_index_2);
+                                p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(boundary_neighbours[1]));
+                                p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[1]);
+
+                                // Move node to where the other 2 used to be:
+                                p_node->rGetModifiableLocation() = r_neighbour_1 + 0.5 * p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2);
+
+                                performed_edge_modifier = true;
+                                // PRINT_VECTOR(p_node->rGetModifiableLocation());
+                                // TRACE("Custom 1.1");
+
+                            }
                         }
                     }
 
