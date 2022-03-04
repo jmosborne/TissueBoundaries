@@ -96,6 +96,8 @@ public:
      */
     virtual void SetupSolve(AbstractCellPopulation<DIM,DIM>& rCellPopulation, std::string outputDirectory);
 
+    double DistanceToEdgeFromPoint( c_vector<double, DIM> P1,  c_vector<double, DIM> P2,  c_vector<double, DIM> P0);
+
     /**
      * Helper method to Do the remshing.
      *

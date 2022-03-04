@@ -112,6 +112,8 @@ void BoundaryForce<DIM>::AddForceContribution(AbstractCellPopulation<DIM>& rCell
     {
         // Helper variable that is a static cast of the cell population
         VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
+        MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
+
         // Iterate over elements
         for (typename VertexMesh<DIM,DIM>::VertexElementIterator elem_iter = p_cell_population->rGetMesh().GetElementIteratorBegin();
             elem_iter != p_cell_population->rGetMesh().GetElementIteratorEnd();
@@ -134,6 +136,32 @@ void BoundaryForce<DIM>::AddForceContribution(AbstractCellPopulation<DIM>& rCell
                     boundary_force[1] = mForceStrength*exp(-5*y_centroid);
                     p_cell_population->GetNode(node_global_index)->AddAppliedForceContribution(boundary_force);
                 }
+            }
+            // Add some noise to the bottom nodes
+            bool add_noise_to_boundary_nodes = false;
+            if(y_centroid < 2.0*mCutOffHeight && add_noise_to_boundary_nodes)
+            {
+                unsigned num_nodes = elem_iter->GetNumNodes();
+                for (unsigned node_local_index = 0; node_local_index < num_nodes; node_local_index++)
+                {
+                    unsigned node_global_index = elem_iter->GetNodeGlobalIndex(node_local_index);
+                    Node<DIM>* p_node = p_mesh->GetNode(node_global_index);
+                    if(p_node->IsBoundaryNode())
+                    {
+                        c_vector<double, DIM> r_node = p_node->rGetLocation();
+                        // if(r_node[1] < mCutOffHeight)
+                        // {
+                            // double y = p_cell_population->GetNode(node_global_index)->rGetLocation()[1]; // y-coordinate of node
+                            c_vector<double, DIM> boundary_force = zero_vector<double>(DIM);
+                            // boundary_force[1] = mForceStrength*1.0/SmallPow(y_centroid, 2);
+                            // boundary_force[1] = 0.1*(RandomNumberGenerator::Instance()->ranf())*mForceStrength*exp(-5*y_centroid);
+                            boundary_force[1] = 0.1*(RandomNumberGenerator::Instance()->ranf())*mForceStrength*(mCutOffHeight - r_node[1]);
+                            p_cell_population->GetNode(node_global_index)->AddAppliedForceContribution(boundary_force);
+                        // }
+                        
+                    }
+                }
+
             }
         }
     }
