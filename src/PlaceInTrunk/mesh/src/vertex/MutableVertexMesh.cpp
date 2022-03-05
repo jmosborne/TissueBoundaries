@@ -39,10 +39,6 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "UblasCustomFunctions.hpp"
 #include "Warnings.hpp"
 
-#include "VertexMeshWriter.hpp"
-#include "MutableMesh.hpp"
-#include "VtkMeshWriter.hpp"
-#include "Debug.hpp"
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::MutableVertexMesh(std::vector<Node<SPACE_DIM>*> nodes,
                                                              std::vector<VertexElement<ELEMENT_DIM, SPACE_DIM>*> vertexElements,
@@ -1032,13 +1028,9 @@ bool MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::CheckForT2Swaps(VertexElementMap
             if (this->GetVolumeOfElement(elem_iter->GetIndex()) < GetT2Threshold())
             {
                 // ...then perform a T2 swap and break out of the loop
-                // TRACE("Have a T2 swap!");
                 PerformT2Swap(*elem_iter);
                 ///\todo: cover this line in a test
                 rElementMap.SetDeleted(elem_iter->GetIndex());
-                // VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T2_swaps",false);
-                // mesh_writer_3.WriteVtkUsingMesh(*this, "null");
-                // TRACE("T2 complete");
                 return true;
             }
         }
@@ -1167,11 +1159,7 @@ bool MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::CheckForIntersections()
                         {
                             if (this->ElementIncludesPoint(node_iter->rGetLocation(), *elem_iter))
                             {
-                                // TRACE("Have a T3 swap!");
                                 this->PerformT3Swap(&(*node_iter), *elem_iter);
-                                // VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T3_swaps",false);
-                                // mesh_writer_3.WriteVtkUsingMesh(*this, "null");
-                                // TRACE("T3 complete");
                                 return true;
                             }
                         }
@@ -1257,11 +1245,7 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::IdentifySwapType(Node<SPACE_DIM>
                          *    / \ Node B
                          *   /   \
                          */
-                        //  TRACE("Have a T1_1 swap!");
                          PerformT1Swap(pNodeA, pNodeB, all_indices);
-                        //  VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T1_1_swaps",false);
-                        //  mesh_writer_3.WriteVtkUsingMesh(*this, "null");
-                        //  TRACE("T1_1 complete");
                     }
                     else if (pNodeA->IsBoundaryNode() || pNodeB->IsBoundaryNode())
                     {
@@ -1423,7 +1407,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::IdentifySwapType(Node<SPACE_DIM>
                         }
                         else
                         {
-                            // PRINT_VARIABLE(shared_elements.size());
                             /*
                              * If this trips then the adjacent node isnt in both elements.
                              * So check the other adjacent node by uncommenting the code blow and adding a new test
@@ -1566,7 +1549,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::IdentifySwapType(Node<SPACE_DIM>
                              */
                              EXCEPTION("Triangular element next to triangular void, not implemented yet.");
                         }
-                        // TRACE("Removing a void");
                         PerformVoidRemoval(pNodeA, pNodeB, this->mNodes[nodeC_index]);
                     }
                     else
@@ -1584,12 +1566,7 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::IdentifySwapType(Node<SPACE_DIM>
                          */
                         assert(pNodeA->IsBoundaryNode());
                         assert(pNodeB->IsBoundaryNode());
-                        // TRACE("Have a T1_3 swap!");
-                         PerformT1Swap(pNodeA, pNodeB, all_indices);
-                        //  VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T1_3_swaps",false);
-                        //  mesh_writer_3.WriteVtkUsingMesh(*this, "null");
-                        //  TRACE("T1_3 complete");
-                        // PerformT1Swap(pNodeA, pNodeB, all_indices);
+                        PerformT1Swap(pNodeA, pNodeB, all_indices);
                     }
                 } // from else if (nodeA_elem_indices.size()==2 && nodeB_elem_indices.size()==2)
                 else
@@ -1613,12 +1590,7 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::IdentifySwapType(Node<SPACE_DIM>
                          *    / (2)\                    /(2) \
                          *   /      \                  /      \
                          */
-                        // PerformT1Swap(pNodeA, pNodeB, all_indices);
-                        //  TRACE("Have a T1_2 swap!");
-                         PerformT1Swap(pNodeA, pNodeB, all_indices);
-                        //  VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T1_2_swaps",false);
-                        //  mesh_writer_3.WriteVtkUsingMesh(*this, "null");
-                        //  TRACE("T1_2 complete");
+                        PerformT1Swap(pNodeA, pNodeB, all_indices);
                     }
                     else
                     {
@@ -1661,12 +1633,7 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::IdentifySwapType(Node<SPACE_DIM>
                 }
                 else
                 {
-                    
-                            // TRACE("Have a T1_4 swap!");
-                         this->PerformT1Swap(pNodeA, pNodeB, all_indices);
-                        //  VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T1_4_swaps",false);
-                        //  mesh_writer_3.WriteVtkUsingMesh(*this, "null");
-                        //  TRACE("T1_4 complete");
+                    this->PerformT1Swap(pNodeA, pNodeB, all_indices);
                 }
                 break;
             }
@@ -1720,8 +1687,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT1Swap(Node<SPACE_DIM>* p
                                                               Node<SPACE_DIM>* pNodeB,
                                                               std::set<unsigned>& rElementsContainingNodes)
 {
-    TRACE("Doing T1");
-
     // First compute and store the location of the T1 swap, which is at the midpoint of nodes A and B
     double distance_between_nodes_CD = mCellRearrangementRatio*mCellRearrangementThreshold;
 
@@ -1855,7 +1820,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT1Swap(Node<SPACE_DIM>* p
             pNodeB->SetAsBoundaryNode(true);
         }
     }
-
 }
 
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
@@ -2181,8 +2145,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformIntersectionSwap(Node<SPA
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT2Swap(VertexElement<ELEMENT_DIM, SPACE_DIM>& rElement)
 {
-    TRACE("Doing T2");
-
     // The given element must be triangular for us to be able to perform a T2 swap on it
     assert(rElement.GetNumNodes() == 3);
 
@@ -2268,7 +2230,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT2Swap(VertexElement<ELEM
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* pNode, unsigned elementIndex)
 {
-    // TRACE("Doing T3");
     assert(SPACE_DIM == 2);                 // LCOV_EXCL_LINE - code will be removed at compile time
     assert(ELEMENT_DIM == SPACE_DIM);    // LCOV_EXCL_LINE - code will be removed at compile time
 
@@ -2316,7 +2277,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
 
     if (pNode->GetNumContainingElements() == 1)
     {
-        TRACE("T3 1.0");
         // Get the index of the element containing the intersecting node
         unsigned intersecting_element_index = *elements_containing_intersecting_node.begin();
 
@@ -2330,7 +2290,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
         // Check to see if the nodes adjacent to the intersecting node are contained in the intersected element between vertices A and B
         if (next_node == vertexA_index || previous_node == vertexA_index || next_node == vertexB_index || previous_node == vertexB_index)
         {
-            TRACE("T3 1.1");
             unsigned common_vertex_index;
 
             if (next_node == vertexA_index || previous_node == vertexA_index)
@@ -2367,7 +2326,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
 
             if (num_common_vertices == 1 || this->mNodes[common_vertex_index]->GetNumContainingElements() > 2)
             {
-                TRACE("T3 1.1.1");
                 /*
                  * This is the situation here.
                  *
@@ -2392,20 +2350,15 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
 
                 // Check the nodes are updated correctly
                 assert(pNode->GetNumContainingElements() == 2);
-
-                // VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T3_1_1_1",false);
-                // mesh_writer_3.WriteVtkUsingMesh(*this, "null");
             }
             else if (num_common_vertices == 2)
             {
-                
                 // The two elements must have an edge in common.  Find whether the common edge is the same as the
                 // edge that is merged onto.
 
                 if ((common_vertex_indices[0]==vertexA_index && common_vertex_indices[1]==vertexB_index) ||
                     (common_vertex_indices[1]==vertexA_index && common_vertex_indices[0]==vertexB_index))
                 {
-                    TRACE("T3 1.1.2");
                     /*
                      * Due to a previous T3 swap the situation looks like this.
                      *
@@ -2429,13 +2382,9 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                     // Mark all three nodes as deleted
                     pNode->MarkAsDeleted();
                     mDeletedNodeIndices.push_back(pNode->GetIndex());
-
-                    // VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T3_1_1_2",false);
-                    // mesh_writer_3.WriteVtkUsingMesh(*this, "null");
                 }
                 else
                 {
-                    TRACE("T3 1.1.3");
                     /*
                      * This is the situation here.
                      *
@@ -2456,8 +2405,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                     if( !(this->mNodes[vertexA_index]->IsDeleted()) && !(this->mNodes[vertexB_index]->IsDeleted()) )
                     {
                         intersection = this->WidenEdgeOrCorrectIntersectionLocationIfNecessary(vertexA_index, vertexB_index, intersection);
-                        // TRACE("got intersection");
-                        // PRINT_VECTOR(intersection);
                         // Move original node
                         pNode->rGetModifiableLocation() = intersection;
 
@@ -2474,17 +2421,12 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
 
                         // Check the nodes are updated correctly
                         assert(pNode->GetNumContainingElements() == 2);
-                        // TRACE("all done");
-
-                        // VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_4("tmp","after_T3_1_1_3",false);
-                        // mesh_writer_4.WriteVtkUsingMesh(*this, "null");
                     }
                     
                 }
             }
             else if (num_common_vertices == 4)
             {
-                TRACE("T3 1.1.4");
                 /*
                  * The two elements share edges CA and BD due to previous swaps but not the edge AB
                  *
@@ -2526,9 +2468,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                 mDeletedNodeIndices.push_back(vertexA_index);
                 this->mNodes[vertexB_index]->MarkAsDeleted();
                 mDeletedNodeIndices.push_back(vertexB_index);
-
-                // VertexMeshWriter<ELEMENT_DIM, SPACE_DIM> mesh_writer_3("tmp","after_T3_1_1_4",false);
-                //     mesh_writer_3.WriteVtkUsingMesh(*this, "null");
             }
             else
             {
@@ -2538,7 +2477,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
         }
         else
         {
-            TRACE("T3 1.2");
             // PRINT_3_VARIABLES(mCellRearrangementRatio,mCellRearrangementThreshold,mDistanceForT3SwapChecking);
             /*
              *  From          To
@@ -2573,14 +2511,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
             bool is_boundary =  (this->mNodes[vertexA_index]->IsBoundaryNode() + this->mNodes[vertexB_index]->IsBoundaryNode() + pNode->IsBoundaryNode());
             pNode->SetAsBoundaryNode(is_boundary);
 
-            PRINT_VECTOR(node_location);
-            PRINT_VECTOR(vertexA);
-            PRINT_VECTOR(vertexB);
-            
-            PRINT_VECTOR(intersection);
-            PRINT_VARIABLE(is_boundary);
-
-
             // this->GetElement(elementIndex)->AddNode(this->mNodes[new_node_global_index], node_A_local_index);
 
             // Add the new node to the original element containing pNode (this also updates the node)
@@ -2596,7 +2526,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
     }
     else if (pNode->GetNumContainingElements() == 2)
     {
-        TRACE("T3 2.0");
         // Find the nodes contained in elements containing the intersecting node
         std::set<unsigned>::const_iterator it = elements_containing_intersecting_node.begin();
 
@@ -2621,7 +2550,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
         if ((next_node_1 == vertexA_index || previous_node_1 == vertexA_index || next_node_2 == vertexA_index || previous_node_2 == vertexA_index) &&
                 (next_node_1 == vertexB_index || previous_node_1 == vertexB_index || next_node_2 == vertexB_index || previous_node_2 == vertexB_index))
         {
-            TRACE("T3 2.1");
             PerformVoidRemoval(pNode, this->mNodes[vertexA_index], this->mNodes[vertexB_index]);
             /*
              * Here we have
@@ -2682,7 +2610,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
         }
         else
         {
-            TRACE("T3 2.2");
             if (next_node_1 == vertexA_index || previous_node_1 == vertexA_index || next_node_2 == vertexA_index || previous_node_2 == vertexA_index)
             {
                 // Get elements containing vertexA_index (the common vertex)
@@ -2710,7 +2637,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
 
                 if (num_common_vertices == 1 || this->mNodes[vertexA_index]->GetNumContainingElements() > 2)
                 {
-                    TRACE("T3 2.2.1");
                     /*
                      *  From          To
                      *   _ B              _ B
@@ -2761,7 +2687,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                 }
                 else if (num_common_vertices == 2)
                 {
-                    TRACE("T3 2.2.2");
                     /*
                      *  From          To
                      *   _ B              _ B
@@ -2821,14 +2746,12 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                 }
                 else
                 {
-                    TRACE("T3 2.2.3");
                     // This can't happen as nodes can't be on the internal edge of two elements
                     NEVER_REACHED;
                 }
             }
             else if (next_node_1 == vertexB_index || previous_node_1 == vertexB_index || next_node_2 == vertexB_index || previous_node_2 == vertexB_index)
             {
-                TRACE("T3 2.3");
                 // Get elements containing vertexB_index (the common vertex)
 
                 assert(this->mNodes[vertexB_index]->GetNumContainingElements()>1);
@@ -2854,7 +2777,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
 
                 if (num_common_vertices == 1 || this->mNodes[vertexB_index]->GetNumContainingElements() > 2)
                 {
-                    TRACE("T3 2.3.1");
                     /*
                      *  From          To
                      *   _B_________      _B____
@@ -2904,7 +2826,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                 }
                 else if (num_common_vertices == 2)
                 {
-                    TRACE("T3 2.3.2");
                     /*
                      *  From          To
                      *   _B_______      _B____
@@ -2964,14 +2885,12 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
                 }
                 else
                 {
-                    TRACE("T3 2.3.3");
                     // This can't happen as nodes can't be on the internal edge of two elements
                     NEVER_REACHED;
                 }
             }
             else
             {
-                TRACE("T3 2.4");
                 /*
                  *  From          To
                  *   _____         _______
@@ -3027,7 +2946,6 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformT3Swap(Node<SPACE_DIM>* p
     }
     else
     {
-        TRACE("T3 3.0");
         EXCEPTION("Trying to merge a node, contained in more than 2 elements, into another element, this is not possible with the vertex mesh.");
     }
 }
@@ -3045,8 +2963,8 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformVoidRemoval(Node<SPACE_DI
      * the ordering of their indices does not matter.
      */
 
-    /*          \            /
-    *            \  (Cell)   /
+    /*          \             /
+    *            \   (Cell)  /
     *             o---------o
     *              \       /
     *               \ (v) /
@@ -3057,11 +2975,124 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformVoidRemoval(Node<SPACE_DI
     *         -----o  (v)  o-----
     */
     // Decide whether the last merged node will be a boundary node or not...  CBFed right now...
-    bool is_boundary = true;
+    bool is_boundary = false;
+    // Check the neighbours of A that are not B or C and check whether any of those are boundary nodes.
+    // If they are a boundary node, then the merged void will be a boundary node. Otherwise, not!
     // std::set<unsigned> elements_containing_nodeA = pNodeA->rGetContainingElementIndices();
-    // std::set<unsigned> elements_containing_nodeB = pNodeB->rGetContainingElementIndices();
-    // std::set<unsigned> elements_containing_nodeC = pNodeC->rGetContainingElementIndices();
+    
+    unsigned node_A_index = pNodeC->GetIndex();
+    unsigned node_B_index = pNodeB->GetIndex();
+    unsigned node_C_index = pNodeC->GetIndex();
 
+    // Check As neighbours
+    // std::set<unsigned> first_neighbour_node_indices;
+    auto first_neighbour_indices = pNodeA->rGetContainingElementIndices();
+    for (auto elem_iter = first_neighbour_indices.begin();
+            elem_iter != first_neighbour_indices.end();
+            ++elem_iter)
+    {
+        auto p_element = this->GetElement(*elem_iter);
+
+        for (auto local_node_index = 0u;
+                local_node_index < p_element->GetNumNodes();
+                ++local_node_index)
+        {
+            // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+            if(global_node_index != node_B_index && global_node_index != node_C_index )
+            {
+                Node<SPACE_DIM>* p_node = this->mNodes[global_node_index];
+                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                if(containing_elements.size() == 1)
+                {
+                    if(p_node->IsBoundaryNode())
+                    {   
+                        // must p_node and A must be connected! surely there is a way to check this, i dont know it.
+                        if( norm_2(this->GetVectorFromAtoB(pNodeA->rGetLocation(), p_node->rGetLocation()) ) < 0.2501 )
+                        {
+                            is_boundary = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+        }
+    }
+    // Check Bs neighbours
+    if(!is_boundary)
+    {
+        auto first_neighbour_indices = pNodeB->rGetContainingElementIndices();
+        for (auto elem_iter = first_neighbour_indices.begin();
+                elem_iter != first_neighbour_indices.end();
+                ++elem_iter)
+        {
+            auto p_element = this->GetElement(*elem_iter);
+
+            for (auto local_node_index = 0u;
+                    local_node_index < p_element->GetNumNodes();
+                    ++local_node_index)
+            {
+                // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                if(global_node_index != node_A_index && global_node_index != node_C_index )
+                {
+                    Node<SPACE_DIM>* p_node = this->mNodes[global_node_index];
+                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                    if(containing_elements.size() == 1)
+                    {
+                        if(p_node->IsBoundaryNode())
+                        {
+                            // must p_node and B must be connected! surely there is a way to check this, i dont know it.
+                            if( norm_2(this->GetVectorFromAtoB(pNodeB->rGetLocation(), p_node->rGetLocation()) ) < 0.2501 )
+                            {
+                                is_boundary = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+    // Check Cs neighbours
+    if(!is_boundary)
+    {
+        auto first_neighbour_indices = pNodeC->rGetContainingElementIndices();
+        for (auto elem_iter = first_neighbour_indices.begin();
+                elem_iter != first_neighbour_indices.end();
+                ++elem_iter)
+        {
+            auto p_element = this->GetElement(*elem_iter);
+
+            for (auto local_node_index = 0u;
+                    local_node_index < p_element->GetNumNodes();
+                    ++local_node_index)
+            {
+                // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                if(global_node_index != node_B_index && global_node_index != node_A_index )
+                {
+                    Node<SPACE_DIM>* p_node = this->mNodes[global_node_index];
+                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                    if(containing_elements.size() == 1)
+                    {
+                        if(p_node->IsBoundaryNode())
+                        {
+                            // must p_node and C must be connected! surely there is a way to check this, i dont know it.
+                            if( norm_2(this->GetVectorFromAtoB(pNodeC->rGetLocation(), p_node->rGetLocation()) ) < 0.2501 )
+                            {
+                                is_boundary = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
 
     PerformNodeMerge(pNodeA, pNodeB);
 
@@ -3081,8 +3112,7 @@ void MutableVertexMesh<ELEMENT_DIM, SPACE_DIM>::PerformVoidRemoval(Node<SPACE_DI
 
     p_merged_node->rGetModifiableLocation() = nodes_midpoint;
 
-
-    // Tag remaining node as non-boundary
+    // Tag remaining node as non-boundary, or boundary
     p_merged_node->SetAsBoundaryNode(is_boundary);
 
     // Remove the deleted nodes and re-index

@@ -74,8 +74,6 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
         EXCEPTION("VertexBoundaryRefinementModifier is to be used with a VertexBasedCellPopulation only");
     }
 
-    // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
-
     // Define some helper variables
     VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
@@ -90,14 +88,10 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
             elem_iter != p_mesh->GetElementIteratorEnd();
             ++elem_iter)
         {
-            //unsigned elem_index = elem_iter->GetIndex();
 
-            //unsigned num_nodes = elem_iter->GetNumNodes();
             for (unsigned node_local_index = 0; node_local_index < elem_iter->GetNumNodes(); node_local_index++)
             {
                 unsigned next_node_local_index = (node_local_index+1) % (elem_iter->GetNumNodes());
-
-                //PRINT_3_VARIABLES(node_local_index,next_node_local_index,num_nodes);
 
                 unsigned node_global_index = elem_iter->GetNodeGlobalIndex(node_local_index);
                 unsigned next_node_global_index = elem_iter->GetNodeGlobalIndex(next_node_local_index);
@@ -121,22 +115,15 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
 
                     assert(shared_elements.size()>0); //otherwise not in the same element at all 
 
-                    // PRINT_VECTOR(p_node_a->rGetLocation());
-                    // PRINT_VECTOR(p_node_b->rGetLocation());
-                    // PRINT_VARIABLE(shared_elements.size());
-
                     if(shared_elements.size() == 1)
                     {
                         // Here we have a boundary edge so add new node if needed.
                         c_vector<double,DIM> edge = p_mesh->GetVectorFromAtoB(p_node_a->rGetLocation(),p_node_b->rGetLocation());
-
-                        // PRINT_VARIABLE(norm_2(edge));
                         
                         if (norm_2(edge) > mMaxEdgeLength)
                         {
                             p_mesh->DivideEdge(p_node_a, p_node_b);
                             recheck_edges = true;
-                            // TRACE("Divided an edge");
                         } 
                         else if (norm_2(edge) < mMinEdgeLength)
                         {
@@ -147,11 +134,6 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                                 p_mesh->PerformNodeMerge(p_node_a,p_node_b);
                                 p_node_a->SetAsBoundaryNode(true);
 
-                                // std::set<unsigned> element_index_set_b = p_node_b->rGetContainingElementIndices();
-                                // unsigned elem_index_b = (*element_index_set_b.begin());
-                                // VertexElement<DIM,DIM>* p_element_b = p_mesh->GetElement(elem_index_b);
-                                // p_element_b->DeleteNode(p_element_b->GetNodeLocalIndex(next_node_global_index));
-                                // p_mesh->DeleteNodePriorToReMesh(next_node_global_index);
                                 recheck_edges = true;
                             }
                             else if(node_b_elem_indices.size() == 2)
@@ -159,18 +141,9 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                                 p_mesh->PerformNodeMerge(p_node_b,p_node_a);
                                 p_node_b->SetAsBoundaryNode(true);
 
-
-                                // Delete node
-                                // std::set<unsigned> element_index_set_a = p_node_a->rGetContainingElementIndices();
-                                // unsigned elem_index_a = (*element_index_set_a.begin());
-                                // VertexElement<DIM,DIM>* p_element_a = p_mesh->GetElement(elem_index_a);
-                                // p_element_a->DeleteNode(p_element_a->GetNodeLocalIndex(node_global_index));
-                                // p_mesh->DeleteNodePriorToReMesh(node_global_index);
                                 recheck_edges = true;
 
                             }
-                            // TRACE("Shrunk an edge");
-                            // NEVER_REACHED; // Not implemented yet
                         }   
                     }
                 }
