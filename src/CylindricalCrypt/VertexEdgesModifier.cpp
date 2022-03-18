@@ -88,6 +88,649 @@ double VertexEdgesModifier<DIM>::DistanceToEdgeFromPoint( c_vector<double, DIM> 
 }
 
 template<unsigned DIM>
+bool VertexEdgesModifier<DIM>::IsNodeABNeighbours(unsigned node_a,unsigned node_b, AbstractCellPopulation<DIM,DIM>& rCellPopulation )
+{
+    bool is_neighbour = false;
+    VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+    std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_a);
+
+    for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+        neighbour_iter != node_neighbours.end();
+        ++neighbour_iter)
+    {
+        unsigned neighbour_index = *neighbour_iter;
+        if(neighbour_index == node_b)
+        {
+            is_neighbour = true;
+        }
+    }
+    return is_neighbour;
+
+}
+
+template<unsigned DIM>
+bool VertexEdgesModifier<DIM>::Remove3NodeVoid(bool performed_edge_mod,unsigned node_index, Node<DIM>* p_neighbour_node_1, Node<DIM>* p_neighbour_node_2, VertexBasedCellPopulation<DIM>* p_cell_population, MutableVertexMesh<DIM,DIM>* p_mesh)
+{
+    bool performed_edge_modifier = performed_edge_mod;
+
+    double mVoidAreaThreshold = 0.01;
+
+    // VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
+    // MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
+
+    Node<DIM>* p_node = p_mesh->GetNode(node_index);
+
+    std::set<unsigned> containing_element_indices = p_node->rGetContainingElementIndices();
+
+    std::set<unsigned> containing_elements_1 = p_neighbour_node_1->rGetContainingElementIndices();
+    std::set<unsigned> containing_elements_2 = p_neighbour_node_2->rGetContainingElementIndices();
+
+    std::set<unsigned> shared_elements;
+    std::set_intersection(containing_elements_1.begin(),
+        containing_elements_1.end(),
+        containing_elements_2.begin(),
+        containing_elements_2.end(),
+        std::inserter(shared_elements, shared_elements.begin()));
+    if(containing_element_indices.size()==2 && containing_elements_2.size()==2 && shared_elements.size()==1)
+    {
+        Node<DIM>* p_boundary_1 = p_neighbour_node_1;
+        Node<DIM>* p_boundary_2 = p_neighbour_node_2;
+                    
+        c_vector<double, DIM> r_node = p_node->rGetLocation();
+        c_vector<double, DIM> r_boundary_1 = p_boundary_1->rGetLocation();
+        c_vector<double, DIM> r_boundary_2 = p_boundary_2->rGetLocation();
+
+        double a = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_boundary_1));
+        double b = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_boundary_2));
+        double c = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_1, r_boundary_2));
+        double s = 0.5*(a+b+c);
+
+        double void_area = sqrt(s*(s-a)*(s-b)*(s-c));
+
+        if(void_area < mVoidAreaThreshold)
+        {
+            c_vector<double, DIM> nodes_midpoint = p_node->rGetLocation()
+            + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_1->rGetLocation()) / 3.0
+            + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_2->rGetLocation()) / 3.0;
+
+            // PRINT_VECTOR(nodes_midpoint);
+
+            /*          \             /
+            *            \   (Cell)  /
+            *             o---------o
+            *              \       /
+            *               \ (v) /
+            *                \   /
+            *     (Cell)       o     (Cell)
+            *                /   \
+            *               /     \
+            *         -----o  (v)  o-----
+            */
+            // Decide whether the last merged node will be a boundary node or not...  CBFed right now...
+            bool is_boundary = false;
+            // Check the neighbours of A that are not B or C and check whether any of those are boundary nodes.
+            // If they are a boundary node, then the merged void will be a boundary node. Otherwise, not!
+                                    
+            unsigned node_A_index = p_node->GetIndex();
+            unsigned node_B_index = p_boundary_1->GetIndex();
+            unsigned node_C_index = p_boundary_2->GetIndex();
+
+            // Check As neighbours
+            std::set<unsigned> first_neighbour_indices = p_node->rGetContainingElementIndices();
+            for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                    elem_iter != first_neighbour_indices.end();
+                    ++elem_iter)
+            {
+                VertexElement<DIM, DIM>* p_element = p_mesh->GetElement(*elem_iter);
+
+                for (unsigned local_node_index = 0;
+                        local_node_index < p_element->GetNumNodes();
+                        ++local_node_index)
+                    {
+                        unsigned num_nodes = p_element->GetNumNodes();
+
+                        unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                        unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+                        if(global_node_index != node_B_index && global_node_index != node_C_index )
+                        {
+                            if(global_node_neigh == node_A_index)
+                            {
+                                Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                if(containing_elements.size() == 1)
+                                {
+                                    if(p_node->IsBoundaryNode())
+                                    {   
+                                        is_boundary = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                                            
+                    }
+            }
+            // Check Bs neighbours
+            if(!is_boundary)
+            {
+                std::set<unsigned> first_neighbour_indices = p_boundary_1->rGetContainingElementIndices();
+                for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                    elem_iter != first_neighbour_indices.end();
+                    ++elem_iter)
+                {
+                    VertexElement<DIM, DIM>*  p_element = p_mesh->GetElement(*elem_iter);
+                    unsigned num_nodes = p_element->GetNumNodes();
+
+                    for (unsigned local_node_index = 0;
+                        local_node_index < p_element->GetNumNodes();
+                        ++local_node_index)
+                    {
+                        // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                        unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                        unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+                        if(global_node_index != node_A_index && global_node_index != node_C_index )
+                        {
+                            if(global_node_neigh == node_B_index)
+                            {
+                                Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                if(containing_elements.size() == 1)
+                                {
+                                    if(p_node->IsBoundaryNode())
+                                    {
+                                        is_boundary = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                                                
+                    }
+                }
+            }
+            // Check Cs neighbours
+            if(!is_boundary)
+            {
+                std::set<unsigned> first_neighbour_indices = p_boundary_2->rGetContainingElementIndices();
+                for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                    elem_iter != first_neighbour_indices.end();
+                    ++elem_iter)
+                {
+                    VertexElement<DIM, DIM>* p_element = p_mesh->GetElement(*elem_iter);
+                    unsigned num_nodes = p_element->GetNumNodes();
+
+                    for (unsigned local_node_index = 0;
+                        local_node_index < p_element->GetNumNodes();
+                        ++local_node_index)
+                    {
+                        // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                        unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                        unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+
+                        if(global_node_index != node_B_index && global_node_index != node_A_index )
+                        {
+                            if(global_node_neigh == node_C_index)
+                            {
+                                Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                if(containing_elements.size() == 1)
+                                {
+                                    if(p_node->IsBoundaryNode())
+                                    {
+                                        is_boundary = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                                                
+                    }
+                }
+            }
+
+            p_mesh->PerformNodeMerge(p_node, p_boundary_1);
+
+            Node<DIM>* p_merged_node = p_boundary_1;
+
+            if (p_boundary_1->IsDeleted())
+            {
+                p_merged_node = p_node;
+            }
+            p_mesh->PerformNodeMerge(p_boundary_2, p_merged_node);
+
+            if (p_merged_node->IsDeleted())
+            {
+                p_merged_node = p_boundary_2;
+            }
+            p_merged_node->rGetModifiableLocation() = nodes_midpoint;
+
+            // Tag remaining node as non-boundary, or boundary
+            p_merged_node->SetAsBoundaryNode(is_boundary);
+
+            performed_edge_modifier = true;
+            
+            p_mesh->ReMesh();
+            return performed_edge_modifier;
+        }
+    }
+
+    return performed_edge_modifier;
+
+}
+
+template<unsigned DIM>
+bool VertexEdgesModifier<DIM>::Remove4NodeVoid(bool performed_edge_mod,unsigned node_index, unsigned node_neighbour_1, unsigned node_neighbour_2, VertexBasedCellPopulation<DIM>* p_cell_population, MutableVertexMesh<DIM,DIM>* p_mesh)
+{
+    bool performed_edge_modifier = performed_edge_mod;
+
+    double mVoidAreaThreshold = 0.01;
+
+    // VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
+    // MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
+
+    std::set<unsigned> node_neighbours_1 = p_cell_population->GetNeighbouringNodeIndices(node_neighbour_1);
+    std::set<unsigned> node_neighbours_2 = p_cell_population->GetNeighbouringNodeIndices(node_neighbour_2);
+
+    // Find common elements
+    std::set<unsigned> shared_elements;
+    std::set_intersection(node_neighbours_1.begin(),
+        node_neighbours_1.end(),
+        node_neighbours_2.begin(),
+        node_neighbours_2.end(),
+        std::inserter(shared_elements, shared_elements.begin()));
+
+    if(shared_elements.size() == 2)
+    {
+        std::set<unsigned>::const_iterator shared_neigh_it = shared_elements.begin();
+        unsigned shared_neigh_1 = (*shared_neigh_it);
+        shared_neigh_it++;
+        unsigned shared_neigh_2 = (*shared_neigh_it);
+
+        Node<DIM>* p_tmp_1 = p_mesh->GetNode(shared_neigh_1);
+        Node<DIM>* p_tmp_2 = p_mesh->GetNode(shared_neigh_2);
+
+        if(node_index == shared_neigh_1 && p_tmp_2->IsBoundaryNode())
+        {
+            Node<DIM>* p_boundary_3 = p_mesh->GetNode(shared_neigh_2);
+            Node<DIM>* p_boundary_1 = p_mesh->GetNode(node_neighbour_1);
+            Node<DIM>* p_boundary_2 = p_mesh->GetNode(node_neighbour_2);
+                                    
+            Node<DIM>* p_node = p_mesh->GetNode(node_index);
+            c_vector<double, DIM> r_node = p_node->rGetLocation();
+            c_vector<double, DIM> r_boundary_1 = p_boundary_1->rGetLocation();
+            c_vector<double, DIM> r_boundary_2 = p_boundary_2->rGetLocation();
+            c_vector<double, DIM> r_boundary_3 = p_boundary_3->rGetLocation();
+
+            double a1 = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_boundary_1));
+            double b1 = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_boundary_2));
+            double c1 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_1, r_boundary_2));
+            double s1 = 0.5*(a1+b1+c1);
+
+            double void_area_1 = sqrt(s1*(s1-a1)*(s1-b1)*(s1-c1));
+
+            double a2 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_3, r_boundary_1));
+            double b2 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_3, r_boundary_2));
+            double c2 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_1, r_boundary_2));
+            double s2 = 0.5*(a2+b2+c2);
+
+            double void_area_2 = sqrt(s2*(s2-a2)*(s2-b2)*(s2-c2));
+            
+            if(void_area_1+void_area_2 < mVoidAreaThreshold)
+            {
+                c_vector<double, DIM> nodes_midpoint = p_node->rGetLocation()
+                + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_1->rGetLocation()) / 4.0
+                + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_2->rGetLocation()) / 4.0
+                + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_3->rGetLocation()) / 4.0;
+
+
+                // Decide whether the last merged node will be a boundary node or not...  CBFed right now...
+                bool is_boundary = false;
+                // Check the neighbours of A that are not B or C and check whether any of those are boundary nodes.
+                // If they are a boundary node, then the merged void will be a boundary node. Otherwise, not!
+                                        
+                unsigned node_A_index = p_node->GetIndex();
+                unsigned node_B_index = p_boundary_1->GetIndex();
+                unsigned node_C_index = p_boundary_2->GetIndex();
+                unsigned node_D_index = shared_neigh_2;
+
+                // Check As neighbours
+                std::set<unsigned> first_neighbour_indices = p_node->rGetContainingElementIndices();
+                for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                        elem_iter != first_neighbour_indices.end();
+                        ++elem_iter)
+                {
+                    VertexElement<DIM, DIM>* p_element = p_mesh->GetElement(*elem_iter);
+
+                    for (unsigned local_node_index = 0;
+                            local_node_index < p_element->GetNumNodes();
+                            ++local_node_index)
+                        {
+                            unsigned num_nodes = p_element->GetNumNodes();
+
+                            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                            unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+                            if(global_node_index != node_B_index && global_node_index != node_C_index && global_node_index != node_D_index)
+                            {
+                                if(global_node_neigh == node_A_index)
+                                {
+                                    Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                    if(containing_elements.size() == 1)
+                                    {
+                                        if(p_node->IsBoundaryNode())
+                                        {   
+                                            is_boundary = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                                                
+                        }
+                }
+                // Check Bs neighbours
+                if(!is_boundary)
+                {
+                    std::set<unsigned> first_neighbour_indices = p_boundary_1->rGetContainingElementIndices();
+                    for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                        elem_iter != first_neighbour_indices.end();
+                        ++elem_iter)
+                    {
+                        VertexElement<DIM, DIM>*  p_element = p_mesh->GetElement(*elem_iter);
+                        unsigned num_nodes = p_element->GetNumNodes();
+
+                        for (unsigned local_node_index = 0;
+                            local_node_index < p_element->GetNumNodes();
+                            ++local_node_index)
+                        {
+                            // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                            unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+                            if(global_node_index != node_A_index && global_node_index != node_C_index  && global_node_index != node_D_index)
+                            {
+                                if(global_node_neigh == node_B_index)
+                                {
+                                    Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                    if(containing_elements.size() == 1)
+                                    {
+                                        if(p_node->IsBoundaryNode())
+                                        {
+                                            is_boundary = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                                                    
+                        }
+                    }
+                }
+                // Check Cs neighbours
+                if(!is_boundary)
+                {
+                    std::set<unsigned> first_neighbour_indices = p_boundary_2->rGetContainingElementIndices();
+                    for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                        elem_iter != first_neighbour_indices.end();
+                        ++elem_iter)
+                    {
+                        VertexElement<DIM, DIM>* p_element = p_mesh->GetElement(*elem_iter);
+                        unsigned num_nodes = p_element->GetNumNodes();
+
+                        for (unsigned local_node_index = 0;
+                            local_node_index < p_element->GetNumNodes();
+                            ++local_node_index)
+                        {
+                            // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                            unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+
+                            if(global_node_index != node_B_index && global_node_index != node_A_index  && global_node_index != node_D_index)
+                            {
+                                if(global_node_neigh == node_C_index)
+                                {
+                                    Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                    if(containing_elements.size() == 1)
+                                    {
+                                        if(p_node->IsBoundaryNode())
+                                        {
+                                            is_boundary = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                                                    
+                        }
+                    }
+                }
+
+
+
+                p_mesh->PerformNodeMerge(p_node, p_boundary_1);
+
+                Node<DIM>* p_merged_node = p_boundary_1;
+
+                if (p_boundary_1->IsDeleted())
+                {
+                    p_merged_node = p_node;
+                }
+                p_mesh->PerformNodeMerge(p_boundary_2, p_merged_node);
+                if (p_merged_node->IsDeleted())
+                {
+                    p_merged_node = p_boundary_2;
+                }
+                p_mesh->PerformNodeMerge(p_boundary_3, p_merged_node);
+                if (p_merged_node->IsDeleted())
+                {
+                    p_merged_node = p_boundary_3;
+                }
+
+                p_merged_node->rGetModifiableLocation() = nodes_midpoint;
+
+                // Tag remaining node as non-boundary, may need to check this.... hmmm
+                p_merged_node->SetAsBoundaryNode(is_boundary);
+                performed_edge_modifier = true;
+                
+                p_mesh->ReMesh();
+                return performed_edge_modifier;
+            }
+                                    
+        }
+        else if(node_index == shared_neigh_2  && p_tmp_1->IsBoundaryNode())
+        {
+            Node<DIM>* p_boundary_3 = p_mesh->GetNode(shared_neigh_1);
+            Node<DIM>* p_boundary_1 = p_mesh->GetNode(node_neighbour_1);
+            Node<DIM>* p_boundary_2 = p_mesh->GetNode(node_neighbour_2);
+                                    
+            Node<DIM>* p_node = p_mesh->GetNode(node_index);
+            c_vector<double, DIM> r_node = p_node->rGetLocation();
+            c_vector<double, DIM> r_boundary_1 = p_boundary_1->rGetLocation();
+            c_vector<double, DIM> r_boundary_2 = p_boundary_2->rGetLocation();
+            c_vector<double, DIM> r_boundary_3 = p_boundary_3->rGetLocation();
+
+            double a1 = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_boundary_1));
+            double b1 = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_boundary_2));
+            double c1 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_1, r_boundary_2));
+            double s1 = 0.5*(a1+b1+c1);
+
+            double void_area_1 = sqrt(s1*(s1-a1)*(s1-b1)*(s1-c1));
+
+            double a2 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_3, r_boundary_1));
+            double b2 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_3, r_boundary_2));
+            double c2 = norm_2(p_mesh->GetVectorFromAtoB(r_boundary_1, r_boundary_2));
+            double s2 = 0.5*(a2+b2+c2);
+
+            double void_area_2 = sqrt(s2*(s2-a2)*(s2-b2)*(s2-c2));
+
+            if(void_area_1+void_area_2 < mVoidAreaThreshold)
+            {
+                c_vector<double, DIM> nodes_midpoint = p_node->rGetLocation()
+                + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_1->rGetLocation()) / 4.0
+                + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_2->rGetLocation()) / 4.0
+                + p_mesh->GetVectorFromAtoB(p_node->rGetLocation(), p_boundary_3->rGetLocation()) / 4.0;
+
+                // Decide whether the last merged node will be a boundary node or not...  CBFed right now...
+                bool is_boundary = false;
+                // Check the neighbours of A that are not B or C and check whether any of those are boundary nodes.
+                // If they are a boundary node, then the merged void will be a boundary node. Otherwise, not!
+                                        
+                unsigned node_A_index = p_node->GetIndex();
+                unsigned node_B_index = p_boundary_1->GetIndex();
+                unsigned node_C_index = p_boundary_2->GetIndex();
+                unsigned node_D_index = shared_neigh_2;
+
+                // Check As neighbours
+                std::set<unsigned> first_neighbour_indices = p_node->rGetContainingElementIndices();
+                for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                        elem_iter != first_neighbour_indices.end();
+                        ++elem_iter)
+                {
+                    VertexElement<DIM, DIM>* p_element = p_mesh->GetElement(*elem_iter);
+
+                    for (unsigned local_node_index = 0;
+                            local_node_index < p_element->GetNumNodes();
+                            ++local_node_index)
+                        {
+                            unsigned num_nodes = p_element->GetNumNodes();
+
+                            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                            unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+                            if(global_node_index != node_B_index && global_node_index != node_C_index && global_node_index != node_D_index)
+                            {
+                                if(global_node_neigh == node_A_index)
+                                {
+                                    Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                    if(containing_elements.size() == 1)
+                                    {
+                                        if(p_node->IsBoundaryNode())
+                                        {   
+                                            is_boundary = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                                                
+                        }
+                }
+                // Check Bs neighbours
+                if(!is_boundary)
+                {
+                    std::set<unsigned> first_neighbour_indices = p_boundary_1->rGetContainingElementIndices();
+                    for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                        elem_iter != first_neighbour_indices.end();
+                        ++elem_iter)
+                    {
+                        VertexElement<DIM, DIM>*  p_element = p_mesh->GetElement(*elem_iter);
+                        unsigned num_nodes = p_element->GetNumNodes();
+
+                        for (unsigned local_node_index = 0;
+                            local_node_index < p_element->GetNumNodes();
+                            ++local_node_index)
+                        {
+                            // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                            unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+                            if(global_node_index != node_A_index && global_node_index != node_C_index  && global_node_index != node_D_index)
+                            {
+                                if(global_node_neigh == node_B_index)
+                                {
+                                    Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                    if(containing_elements.size() == 1)
+                                    {
+                                        if(p_node->IsBoundaryNode())
+                                        {
+                                            is_boundary = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                                                    
+                        }
+                    }
+                }
+                // Check Cs neighbours
+                if(!is_boundary)
+                {
+                    std::set<unsigned> first_neighbour_indices = p_boundary_2->rGetContainingElementIndices();
+                    for (std::set<unsigned>::iterator elem_iter = first_neighbour_indices.begin();
+                        elem_iter != first_neighbour_indices.end();
+                        ++elem_iter)
+                    {
+                        VertexElement<DIM, DIM>* p_element = p_mesh->GetElement(*elem_iter);
+                        unsigned num_nodes = p_element->GetNumNodes();
+
+                        for (unsigned local_node_index = 0;
+                            local_node_index < p_element->GetNumNodes();
+                            ++local_node_index)
+                        {
+                            // first_neighbour_node_indices.insert(p_element->GetNodeGlobalIndex(local_node_index));
+                            unsigned global_node_index = p_element->GetNodeGlobalIndex(local_node_index);
+                            unsigned global_node_neigh = p_element->GetNodeGlobalIndex((local_node_index+1)%num_nodes);
+
+                            if(global_node_index != node_B_index && global_node_index != node_A_index  && global_node_index != node_D_index)
+                            {
+                                if(global_node_neigh == node_C_index)
+                                {
+                                    Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
+                                    std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
+                                    if(containing_elements.size() == 1)
+                                    {
+                                        if(p_node->IsBoundaryNode())
+                                        {
+                                            is_boundary = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                                                    
+                        }
+                    }
+                }
+
+                p_mesh->PerformNodeMerge(p_node, p_boundary_1);
+
+                Node<DIM>* p_merged_node = p_boundary_1;
+
+                if (p_boundary_1->IsDeleted())
+                {
+                    p_merged_node = p_node;
+                }
+                p_mesh->PerformNodeMerge(p_boundary_2, p_merged_node);
+                if (p_merged_node->IsDeleted())
+                {
+                    p_merged_node = p_boundary_2;
+                }
+                p_mesh->PerformNodeMerge(p_boundary_3, p_merged_node);
+                if (p_merged_node->IsDeleted())
+                {
+                    p_merged_node = p_boundary_3;
+                }
+
+                p_merged_node->rGetModifiableLocation() = nodes_midpoint;
+
+                // Tag remaining node as non-boundary, may need to check this.... hmmm
+                p_merged_node->SetAsBoundaryNode(is_boundary);
+                performed_edge_modifier = true;
+
+                p_mesh->ReMesh();
+                return performed_edge_modifier;
+            }
+
+        }
+    }
+    return performed_edge_modifier;
+}
+
+
+template<unsigned DIM>
 void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
     if (dynamic_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation) == nullptr)
@@ -193,6 +836,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                 p_node->SetAsBoundaryNode(false);
 
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 3 cell edge stitch");
                             }
 
                         }
@@ -216,8 +860,11 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                 // Move node to where the other 2 used to be:
                                 p_node->rGetModifiableLocation() = r_neighbour_1 + 0.5 * p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2);
+                                p_node->SetAsBoundaryNode(true);
 
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 3 cell edge stitch");
+
                             }
                         }
                     }
@@ -267,43 +914,17 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
-
-                                // // Move node 0 to the mid-point
-                                // p_neighbour_0->rGetModifiableLocation() = r_neighbour_0 + 0.5 * p_mesh->GetVectorFromAtoB(r_neighbour_0, r_neighbour_2);
-
-                                // // Update the elements previously containing node 2 to contain node 0
-                                // // Find the local index of node 2 in this element
-                                // VertexElement<DIM,DIM>* p_element_2 = p_mesh->GetElement(element_index_2);
-                                // unsigned node_2_local_index = p_element_2->GetNodeLocalIndex(boundary_neighbour_2);
-
-                                // /*
-                                // * If this element already contains node 0, then just remove node 2.
-                                // * Otherwise replace it with node 0 in the element and remove it from mNodes.
-                                // */
-                                // // if (element_index_set_0.count(element_index_2) != 0)
-                                // // {
-                                //     TRACE("Deleted");
-                                //     p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(node_2_local_index));
-                                //     // p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(boundary_neighbour_2));
-                                //     p_mesh->DeleteNodePriorToReMesh(boundary_neighbour_2);
-                                // // }
-                                // // else
-                                // // {
-                                //     TRACE("Replaced");
-                                //     // Replace node 2 with node 0 in this element
-                                //     p_mesh->GetElement(element_index_2)->AddNode(p_neighbour_0, node_2_local_index);
-                                //     // p_mesh->GetElement(element_index_2)->AddNode(p_neighbour_0, boundary_neighbour_2);
-
-                                // // }
-
-
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)
                             {
                                 // Merge 1 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with void");
                             }
                         }
                         else if(element_index_1 == element_index_2)
@@ -312,13 +933,17 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_0)) < distanceBetweenVerteciesThreshold)
                             {
                                 // Merge 0 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with void");
                             }
                         }
                         else if(element_index_2 == element_index_0)
@@ -327,16 +952,20 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 1 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_1)) < distanceBetweenVerteciesThreshold)
                             {
                                 // Merge 0 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with void");
                             }
                         }
-
+                        // TRACE("line 342");
                     }
 
                     /* We might have the weird case as bellow:
@@ -391,25 +1020,33 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 0 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_3);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_1)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_1);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 1 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_3);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                         }
                         else if(element_index_0 == element_index_2)
@@ -418,25 +1055,33 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 0 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_3);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_1)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_1);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                         }
                         else if(element_index_0 == element_index_3)
@@ -445,25 +1090,33 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 0 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_3,r_neighbour_1)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 3 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_3,p_neighbour_1);
+                                p_neighbour_3->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                         }
                         else if(element_index_1 == element_index_2)
@@ -472,25 +1125,33 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 1 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_3);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_0)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 0
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_0);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                         }
                         else if(element_index_1 == element_index_3)
@@ -499,25 +1160,33 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 1
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
+                                p_neighbour_0->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 1 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_3,r_neighbour_0)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 3 and 0
                                 p_mesh->PerformNodeMerge(p_neighbour_3,p_neighbour_0);
+                                p_neighbour_3->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 2 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
+                                p_neighbour_2->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                         }
                         else if(element_index_2 == element_index_3)
@@ -526,28 +1195,36 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             {
                                 // Merge 0 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
+                                p_neighbour_3->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 1 and 2
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_3,r_neighbour_0)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 3 and 0
                                 p_mesh->PerformNodeMerge(p_neighbour_3,p_neighbour_0);
+                                p_neighbour_3->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                             else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                             {
                                 // Merge 1 and 3
                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_3);
+                                p_neighbour_1->SetAsBoundaryNode(true);
                                 performed_edge_modifier = true;
+                                // TRACE("Performed 2 cell edge stitch with large void");
                             }
                         }
-
+                        // TRACE("line 553");
                     }
                 }
                 
@@ -572,7 +1249,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                         // Make sure node_2 is a boundary node
                         if (node_iter_2->IsBoundaryNode())
                         {
-                             unsigned elem_index_1 = (*containing_element_indices.begin());
+                            unsigned elem_index_1 = (*containing_element_indices.begin());
                             // make sure node_2 and node 1 are not in the same element
                             std::set<unsigned> containing_element_indices_2 = node_iter_2->rGetContainingElementIndices();
                             bool node_2_and_node_in_same_element = containing_element_indices_2.find(elem_index_1) != containing_element_indices_2.end();
@@ -582,7 +1259,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                 c_vector<double, DIM> r_node_2 = node_iter_2->rGetLocation();
 
                                 // 1 and 2 are close, check if 1 is close to the edge of node 2 and its neighbours
-                                if(norm_2(p_mesh->GetVectorFromAtoB(r_node_1,r_node_2)) < 0.05)
+                                if(norm_2(p_mesh->GetVectorFromAtoB(r_node_1,r_node_2)) < 0.06)
                                 {
                                     unsigned node_2_index = node_iter_2->GetIndex();
                                     std::set<unsigned> node_2_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_2_index);
@@ -598,21 +1275,49 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                         if(p_neighbour_node->IsBoundaryNode() )
                                         {
+                                            
                                             c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
                                                                                         
                                             double distance_to_edge = DistanceToEdgeFromPoint(r_neighbour,r_node_2,r_node_1);
 
-                                            if(distance_to_edge < 0.05)
+                                            if(distance_to_edge < 0.06)
                                             {
-                                                
+                                                PRINT_VECTOR(r_neighbour);
+                                                PRINT_VECTOR(r_node_2);
+                                                PRINT_VECTOR(r_node_1);
+
                                                 unsigned node_index = node_iter->GetIndex();
 
                                                 Node<DIM>* p_neighbour_1= p_mesh->GetNode(node_index);
                                                 Node<DIM>* p_neighbour_2= p_mesh->GetNode(node_2_index);
+
+                                                std::set<unsigned> node_1_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+                                                std::set<unsigned> node_2_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_2_index);
+
+                                                std::set<unsigned> shared_elements;
+                                                std::set_intersection(node_1_neighbours.begin(),
+                                                                    node_1_neighbours.end(),
+                                                                    node_2_neighbours.begin(),
+                                                                    node_2_neighbours.end(),
+                                                                    std::inserter(shared_elements, shared_elements.begin()));
+
+                                                if(shared_elements.size() == 1)
+                                                {
+                                                    unsigned shared_neigh = (*shared_elements.begin());
+                                                    Node<DIM>* p_shared_neigh= p_mesh->GetNode(shared_neigh);
+                                                    std::set<unsigned> containing_elements = p_shared_neigh->rGetContainingElementIndices();
+                                                    if(containing_elements.size() > 1)
+                                                    {
+                                                        p_shared_neigh->SetAsBoundaryNode(false);
+
+                                                    }
+                                                }
+
                                                 p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
 
                                                 p_neighbour_1->SetAsBoundaryNode(true);
                                                 performed_edge_modifier = true;
+                                                // TRACE("Performed node merge into edge");
                                                 break;
                                             }
 
@@ -631,6 +1336,21 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
             }
         }
     }
+
+    if(performed_edge_modifier)
+    {
+        p_mesh->ReMesh();
+        // TRACE("1_mesh");
+        // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+        // std::stringstream time;
+        // time << num_timesteps;
+        // PRINT_VARIABLE(num_timesteps);
+        // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "1_mesh", false);
+        // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+
+        // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
+    }
+    performed_edge_modifier = false;
 
     /*
     *        |                           |
@@ -706,7 +1426,9 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                         p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[1]);
 
                                         p_node->rGetModifiableLocation() = r_neighbour_2;
+                                        p_node->SetAsBoundaryNode(true);
                                         performed_edge_modifier = true;
+                                        // TRACE("Performed node merge down edge");
                                     }
 
                                 }
@@ -728,7 +1450,9 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                         p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[0]);
 
                                         p_node->rGetModifiableLocation() = r_neighbour_1;
+                                        p_node->SetAsBoundaryNode(true);
                                         performed_edge_modifier = true;
+                                        // TRACE("Performed node merge down edge");
                                     }
                                 }
                             }
@@ -738,6 +1462,19 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
             }
         }
     }
+
+    if(performed_edge_modifier)
+    {
+        p_mesh->ReMesh();
+        // TRACE("2_mesh");
+        // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+        // std::stringstream time;
+        // time << num_timesteps;
+        // PRINT_VARIABLE(num_timesteps);
+        // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "2_mesh", false);
+        // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+    }
+    performed_edge_modifier = false;
 
     // Might have this sometimes due to boundary node misslabelling... 
     /*  --------o---------
@@ -754,8 +1491,8 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
             node_iter != p_mesh->GetNodeIteratorEnd();
             ++node_iter)
         {
-            if (node_iter->IsBoundaryNode())
-            {
+            // if (node_iter->IsBoundaryNode())
+            // {
                 std::set<unsigned> containing_element_indices = node_iter->rGetContainingElementIndices();
                 if(containing_element_indices.size() == 2)
                 {
@@ -801,18 +1538,286 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             p_mesh->DeleteNodePriorToReMesh(node_index);
 
                             performed_edge_modifier = true;
+                            // TRACE("remove internal node");
                         }
+                    }
+                }
+            // }
+        }
+    }
+    if(performed_edge_modifier)
+    {
+        p_mesh->ReMesh();
+        // TRACE("3_mesh");
+        // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+        // std::stringstream time;
+        // time << num_timesteps;
+        // PRINT_VARIABLE(num_timesteps);
+        // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "3_mesh", false);
+        // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+    }
+    performed_edge_modifier = false;
+    bool performed_edge_modifier_2 = false;
+
+    // Void removal
+    double mVoidAreaThreshold = 0.01;
+    if(true)
+    {
+        for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
+            node_iter != p_mesh->GetNodeIteratorEnd();
+            ++node_iter)
+        {
+            if (node_iter->IsBoundaryNode())
+            {
+                std::set<unsigned> containing_element_indices = node_iter->rGetContainingElementIndices();
+                if(containing_element_indices.size() == 2)
+                {
+                    unsigned node_index = node_iter->GetIndex();
+                    std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+                    
+                    if(node_neighbours.size() == 3)
+                    {
+                        std::set<unsigned>::const_iterator neigh_it = node_neighbours.begin();
+                        unsigned node_neighbour_1 = (*neigh_it);
+                        neigh_it++;
+                        unsigned node_neighbour_2 = (*neigh_it);
+                        neigh_it++;
+                        unsigned node_neighbour_3 = (*neigh_it);
+
+                        Node<DIM>* p_neighbour_node_1 = p_mesh->GetNode(node_neighbour_1);
+                        Node<DIM>* p_neighbour_node_2 = p_mesh->GetNode(node_neighbour_2);
+                        Node<DIM>* p_neighbour_node_3 = p_mesh->GetNode(node_neighbour_3);
+
+
+                        /*          \             /
+                        *            \   (Cell)  /
+                        *             o---------o
+                        *              \       /
+                        *               \ (v) /
+                        *                \   /
+                        *     (Cell)       o     (Cell)
+                        *                /   \
+                        *               /     \
+                        *         -----o  (v)  o-----
+                        */
+                        if(p_neighbour_node_1->IsBoundaryNode() && p_neighbour_node_2->IsBoundaryNode() && IsNodeABNeighbours(node_neighbour_1,node_neighbour_2, rCellPopulation ))
+                        {
+                            performed_edge_modifier = Remove3NodeVoid(performed_edge_modifier, node_index, p_neighbour_node_1, p_neighbour_node_2, p_cell_population, p_mesh);
+                            
+                            if(performed_edge_modifier)
+                            {
+                                // TRACE("Performed Void Removel");
+                            }
+                        }
+                        else if(p_neighbour_node_3->IsBoundaryNode() && p_neighbour_node_2->IsBoundaryNode() && IsNodeABNeighbours(node_neighbour_3,node_neighbour_2, rCellPopulation ))
+                        {
+                            performed_edge_modifier = Remove3NodeVoid(performed_edge_modifier, node_index, p_neighbour_node_3, p_neighbour_node_2, p_cell_population, p_mesh);
+
+                            if(performed_edge_modifier)
+                            {
+                                // TRACE("Performed Void Removel");
+                            }
+                        }
+                        else if(p_neighbour_node_1->IsBoundaryNode() && p_neighbour_node_3->IsBoundaryNode() && IsNodeABNeighbours(node_neighbour_1,node_neighbour_3, rCellPopulation ))
+                        {
+                            performed_edge_modifier = Remove3NodeVoid(performed_edge_modifier, node_index, p_neighbour_node_1, p_neighbour_node_3, p_cell_population, p_mesh);
+
+                            if(performed_edge_modifier)
+                            {
+                                // TRACE("Performed Void Removel");
+                            }
+                        }
+
+                        if(!performed_edge_modifier)
+                        {
+                            /*          \    (Cell)   /
+                            *            o-----o-----o
+                            *             \         /
+                            *              \       /
+                            *               \ (v) /
+                            *                \   /
+                            *     (Cell)       o     (Cell)
+                            *                /   \
+                            *               /     \
+                            *         -----o  (v)  o-----
+                            */
+                            if(p_neighbour_node_1->IsBoundaryNode() && p_neighbour_node_2->IsBoundaryNode() && !(IsNodeABNeighbours(node_neighbour_1,node_neighbour_2, rCellPopulation)) )
+                            {
+                                performed_edge_modifier_2 = Remove4NodeVoid(performed_edge_modifier_2, node_index, node_neighbour_1, node_neighbour_2,  p_cell_population, p_mesh);
+
+                                if(performed_edge_modifier_2)
+                                {
+                                    // TRACE("Performed Void 2 Removel");
+                                }
+                            }
+                            else if(p_neighbour_node_1->IsBoundaryNode() && p_neighbour_node_3->IsBoundaryNode() && !(IsNodeABNeighbours(node_neighbour_1,node_neighbour_3, rCellPopulation)) )
+                            {
+                                performed_edge_modifier_2 = Remove4NodeVoid(performed_edge_modifier_2, node_index, node_neighbour_1, node_neighbour_3,  p_cell_population, p_mesh);
+
+                                if(performed_edge_modifier_2)
+                                {
+                                    // TRACE("Performed Void 2 Removel");
+                                }
+                            }
+                            else if(p_neighbour_node_3->IsBoundaryNode() && p_neighbour_node_2->IsBoundaryNode() && !(IsNodeABNeighbours(node_neighbour_3,node_neighbour_2, rCellPopulation)) )
+                            {
+                                performed_edge_modifier_2 = Remove4NodeVoid(performed_edge_modifier_2, node_index, node_neighbour_3, node_neighbour_2,  p_cell_population, p_mesh); 
+
+                                if(performed_edge_modifier_2)
+                                {
+                                    // TRACE("Performed Void 2 Removel");
+                                }
+                            }
+                        }
+
                     }
                 }
             }
         }
+
     }
 
-    if(performed_edge_modifier)
+    if(performed_edge_modifier || performed_edge_modifier_2)
     {
         p_mesh->ReMesh();
-        // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
+    //     TRACE("4_mesh");
+    //     unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+    //     std::stringstream time;
+    //     time << num_timesteps;
+    //     PRINT_VARIABLE(num_timesteps);
+    //     VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "4_mesh", false);
+    //     vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
     }
+
+
+    // Clean any rouge nodes that have incorrectly been labeled a boundary node.
+    // if(true)
+    // {
+    //     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
+    //         node_iter != p_mesh->GetNodeIteratorEnd();
+    //         ++node_iter)
+    //     {
+    //         if (node_iter->IsBoundaryNode())
+    //         {
+
+    //             bool is_boundary = false;
+
+    //             std::set<unsigned> containing_element_indices = node_iter->rGetContainingElementIndices();
+    //             if(containing_element_indices.size() == 1)
+    //             {
+    //                 is_boundary = true;
+    //             }
+    //             else if(containing_element_indices.size() > 1)
+    //             {
+    //                 unsigned node_index = node_iter->GetIndex();
+    //                 std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+
+    //                 for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+    //                     neighbour_iter != node_neighbours.end();
+    //                     ++neighbour_iter)
+    //                 {
+    //                     unsigned neighbour_index = *neighbour_iter;
+    //                     Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+    //                     std::set<unsigned> element_index_set_n = p_neighbour_node->rGetContainingElementIndices();
+
+    //                     if(p_neighbour_node->IsBoundaryNode() && (element_index_set_n.size()==1) )
+    //                     {
+    //                         is_boundary = true;
+    //                     }
+    //                 }
+
+    //                 // Check if we have nodes in an internal void:
+    //                 if(is_boundary == false)
+    //                 {
+    //                     unsigned numb_boundary_neighs = 0;
+    //                    for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+    //                     neighbour_iter != node_neighbours.end();
+    //                     ++neighbour_iter)
+    //                     {
+    //                         unsigned neighbour_index = *neighbour_iter;
+    //                         Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+    //                         std::set<unsigned> element_index_set_n = p_neighbour_node->rGetContainingElementIndices();
+
+    //                         if(p_neighbour_node->IsBoundaryNode() )
+    //                         {
+    //                             numb_boundary_neighs++;
+    //                         }
+
+    //                     }
+    //                     if(numb_boundary_neighs > 2)
+    //                     {
+    //                         is_boundary = true;
+    //                     }
+    //                 }
+    //             }
+                
+
+    //             node_iter->SetAsBoundaryNode(is_boundary);
+
+    //         }
+    //     }
+    // }
+    if(true)
+    {
+        for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
+            node_iter != p_mesh->GetNodeIteratorEnd();
+            ++node_iter)
+        {
+            bool is_boundary = false;
+            // bool is_boundary_tmp = false;
+            if (node_iter->IsBoundaryNode())
+            {
+                is_boundary = true;
+
+                // is_boundary_tmp = true;
+                // unsigned node_index = node_iter->GetIndex();
+                // std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+
+                // for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+                //     neighbour_iter != node_neighbours.end();
+                //     ++neighbour_iter)
+                // {
+                //     unsigned neighbour_index = *neighbour_iter;
+                //     Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+
+                //     if(p_neighbour_node->IsBoundaryNode())
+                //     {
+                //         is_boundary = true;
+                //     }
+                // }
+            }
+            else
+            {
+                std::set<unsigned> containing_element_indices = node_iter->rGetContainingElementIndices();
+                if(containing_element_indices.size() == 1)
+                {
+                    is_boundary = true;
+                }
+                else if(containing_element_indices.size() > 1)
+                {
+                    unsigned node_index = node_iter->GetIndex();
+                    std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+
+                    for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+                        neighbour_iter != node_neighbours.end();
+                        ++neighbour_iter)
+                    {
+                        unsigned neighbour_index = *neighbour_iter;
+                        Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+                        std::set<unsigned> element_index_set_n = p_neighbour_node->rGetContainingElementIndices();
+
+                        if(p_neighbour_node->IsBoundaryNode() && (element_index_set_n.size()==1) )
+                        {
+                            is_boundary = true;
+                        }
+                    }
+                }
+            }
+
+            node_iter->SetAsBoundaryNode(is_boundary);
+        }
+    }
+
 }
 
 template<unsigned DIM>

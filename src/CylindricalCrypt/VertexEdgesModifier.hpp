@@ -40,6 +40,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/serialization/base_object.hpp>
 
 #include "AbstractCellBasedSimulationModifier.hpp"
+#include "VertexBasedCellPopulation.hpp"
+#include "MutableMesh.hpp"
 
 /**
  * A modifier class which at each simulation time step removes nodes
@@ -97,6 +99,12 @@ public:
     virtual void SetupSolve(AbstractCellPopulation<DIM,DIM>& rCellPopulation, std::string outputDirectory);
 
     double DistanceToEdgeFromPoint( c_vector<double, DIM> P1,  c_vector<double, DIM> P2,  c_vector<double, DIM> P0);
+
+    bool IsNodeABNeighbours( unsigned node_a,unsigned node_b, AbstractCellPopulation<DIM,DIM>& rCellPopulation );
+
+    bool Remove3NodeVoid(bool performed_edge_modifier, unsigned node_index, Node<DIM>* p_neighbour_node_1, Node<DIM>* p_neighbour_node_2, VertexBasedCellPopulation<DIM>* p_cell_population, MutableVertexMesh<DIM,DIM>* p_mesh);
+
+    bool Remove4NodeVoid(bool performed_edge_modifier, unsigned node_index, unsigned node_neighbour_1, unsigned node_neighbour_2, VertexBasedCellPopulation<DIM>* p_cell_population, MutableVertexMesh<DIM,DIM>* p_mesh);
 
     /**
      * Helper method to Do the remshing.
