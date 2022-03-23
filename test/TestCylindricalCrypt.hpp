@@ -736,111 +736,112 @@ public:
             /*
             * == VM Curved ==
             */
-            // {
-            //     std::cout << "Vertex Curved \n" << std::flush; 
+            {
+                std::cout << "Vertex Curved \n" << std::flush; 
 
-            //     p_gen->Reseed(sim_index);
-            //     std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved/Run_" +  out.str();
+                p_gen->Reseed(sim_index);
+                std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved/Run_" +  out.str();
 
-            //     // Create mesh
-            //     CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
-            //     Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
-            //     p_mesh->SetCellRearrangementThreshold(0.1);
+                // Create mesh
+                CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
+                Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
+                p_mesh->SetCellRearrangementThreshold(0.05);
+                p_mesh->SetCellRearrangementRatio(1.35);
 
-            //     // Create cells
-            //     std::vector<CellPtr> cells;
-            //     GenerateCells(p_mesh->GetNumElements(),cells,1.0,M_CONTACT_INHIBITION_LEVEL); //mature_volume = 1.0
+                // Create cells
+                std::vector<CellPtr> cells;
+                GenerateCells(p_mesh->GetNumElements(),cells,1.0,M_CONTACT_INHIBITION_LEVEL); //mature_volume = 1.0
 
-            //     // Create tissue
-            //     VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
-            //     cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
-            //     cell_population.AddCellWriter<CellVolumesWriter>();
-            //     cell_population.AddCellWriter<CellIdWriter>();
+                // Create tissue
+                VertexBasedCellPopulation<2> cell_population(*p_mesh, cells);
+                cell_population.AddCellPopulationCountWriter<CellProliferativeTypesCountWriter>();
+                cell_population.AddCellWriter<CellVolumesWriter>();
+                cell_population.AddCellWriter<CellIdWriter>();
 
-            //     // Create crypt simulation from cell population
-            //     OffLatticeSimulationWithMonoclonalStoppingEvent simulator(cell_population);
-            //     simulator.SetStartTime(M_END_STEADY_STATE);
-            //     simulator.SetDt(M_DT_TIME);
-            //     simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
-            //     simulator.SetEndTime(M_END_STEADY_STATE);
-            //     simulator.SetOutputDirectory(output_directory);
-            //     simulator.SetOutputDivisionLocations(true);
-            //     simulator.SetOutputCellVelocities(true);
-            //     cell_population.AddCellWriter<CellAncestorWriter>();
+                // Create crypt simulation from cell population
+                OffLatticeSimulationWithMonoclonalStoppingEvent simulator(cell_population);
+                simulator.SetStartTime(M_END_STEADY_STATE);
+                simulator.SetDt(M_DT_TIME);
+                simulator.SetSamplingTimestepMultiple(M_SAMPLE_TIME);
+                simulator.SetEndTime(M_END_STEADY_STATE);
+                simulator.SetOutputDirectory(output_directory);
+                simulator.SetOutputDivisionLocations(true);
+                simulator.SetOutputCellVelocities(true);
+                cell_population.AddCellWriter<CellAncestorWriter>();
 
-            //     //Add Wnt concentration modifier
-            //     MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
-            //     p_wnt_modifier->SetType(LINEAR);
-            //     p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
-            //     simulator.AddSimulationModifier(p_wnt_modifier);
+                //Add Wnt concentration modifier
+                MAKE_PTR(WntConcentrationModifier<2>, p_wnt_modifier);
+                p_wnt_modifier->SetType(LINEAR);
+                p_wnt_modifier->SetCryptLength(M_CRYPT_LENGTH);
+                simulator.AddSimulationModifier(p_wnt_modifier);
 
-            //     // Add volume tracking modifier
-            //     MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
-            //     simulator.AddSimulationModifier(p_modifier);
+                // Add volume tracking modifier
+                MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
+                simulator.AddSimulationModifier(p_modifier);
 
-            //     // Refine the edges on boundary to get smooth edges
-                // MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
-                // simulator.AddSimulationModifier(refinement_modifier);
+                // Refine the edges on boundary to get smooth edges
+                MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
+                simulator.AddSimulationModifier(refinement_modifier);
 
-                // // Fix some of the edge cases which cause problems...
-                // MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
-                // simulator.AddSimulationModifier(edge_modifier);
+                // Fix some of the edge cases which cause problems...
+                MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
+                simulator.AddSimulationModifier(edge_modifier);
 
-            //     // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
-            //     MAKE_PTR(NagaiHondaForce<2>, p_force);
-            //     p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
-            //     p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
-            //     p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
-            //     p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
-            //     simulator.AddForce(p_force);
+                // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
+                MAKE_PTR(NagaiHondaForce<2>, p_force);
+                p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
+                p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
+                p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
+                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
+                simulator.AddForce(p_force);
                 
-            //     MAKE_PTR(BoundaryForce<2>, p_boundary_force);
-            //     p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
-            //     p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
-            //     simulator.AddForce(p_boundary_force);
+                MAKE_PTR(BoundaryForce<2>, p_boundary_force);
+                p_boundary_force->SetForceStrength(M_BOUNDARY_FORCE_STRENGTH);
+                p_boundary_force->SetCutOffHeight(M_BOUNDARY_FORCE_CUTOFF);
+                simulator.AddForce(p_boundary_force);
 
-            //     // Sloughing killer
-            //     MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
-            //     simulator.AddCellKiller(p_killer);
+                // Sloughing killer
+                MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
+                simulator.AddCellKiller(p_killer);
 
-            //     boost::shared_ptr<AbstractVertexBasedDivisionRule<2> > p_division_rule_to_set(new RandomDirectionVertexBasedDivisionRule<2>());
-            //     cell_population.SetVertexBasedDivisionRule(p_division_rule_to_set);
+                boost::shared_ptr<AbstractVertexBasedDivisionRule<2> > p_division_rule_to_set(new RandomDirectionVertexBasedDivisionRule<2>());
+                cell_population.SetVertexBasedDivisionRule(p_division_rule_to_set);
 
-            //     // Run simulation
-            //     try
-            //     {
-            //         simulator.Solve();
-            //     }
-            //     catch (Exception& e)
-            //     {
-            //         std::cout << "\n Vertex Curved Run " << sim_index << " Aborted \n" << std::flush;
-            //     }
+                // Run simulation
+                try
+                {
+                    simulator.Solve();
+                }
+                catch (Exception& e)
+                {
+                    std::cout << "\n Vertex Curved Run " << sim_index << " Aborted \n" << std::flush;
+                }
 
-            //     MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
-            //     simulator.AddSimulationModifier(edge_modifier);
+                MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
+                simulator.AddSimulationModifier(edge_modifier);
 
-            //     // Mark Ancestors
-            //     simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
+                // Mark Ancestors
+                simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
 
-            //     // Reset end time for simulation and run for a further duration
-            //     simulator.SetEndTime(M_END_TIME);
+                // Reset end time for simulation and run for a further duration
+                simulator.SetEndTime(M_END_TIME);
 
-            //     try
-            //     {
-            //         simulator.Solve();
-            //     }
-            //     catch (Exception& e)
-            //     {
-            //         std::cout << "\n Vertex Curved Run " << sim_index << " Aborted \n" << std::flush;
-            //     }
+                try
+                {
+                    simulator.Solve();
+                }
+                catch (Exception& e)
+                {
+                    std::cout << "\n Vertex Curved Run " << sim_index << " Aborted \n" << std::flush;
+                }
                 
-            //     // Extra Gubbins to get to loop: this is usually done by the SetUp and TearDown methods
-            //     SimulationTime::Instance()->Destroy();
-            //     SimulationTime::Instance()->SetStartTime(0.0);
+                // Extra Gubbins to get to loop: this is usually done by the SetUp and TearDown methods
+                SimulationTime::Instance()->Destroy();
+                SimulationTime::Instance()->SetStartTime(0.0);
                 
-            //     // Clear singletons
-            //     Warnings::Instance()->QuietDestroy();
-            // }
+                // Clear singletons
+                Warnings::Instance()->QuietDestroy();
+            }
         }
     }
 };

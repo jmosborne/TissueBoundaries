@@ -113,7 +113,7 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                             node_b_elem_indices.end(),
                             std::inserter(shared_elements, shared_elements.begin()));
 
-                    assert(shared_elements.size()>0); //otherwise not in the same element at all 
+                    // assert(shared_elements.size()>0); //otherwise not in the same element at all 
 
                     if(shared_elements.size() == 1)
                     {
@@ -127,8 +127,9 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                         } 
                         else if (norm_2(edge) < mMinEdgeLength)
                         {
+                            // TRACE("help");
                             // Check to make sure we don't delete a node that is a vertex, only a free boundary node
-                            if(node_a_elem_indices.size() == 2)
+                            if(node_a_elem_indices.size() >= 2)
                             {
                                 // Delete node
                                 p_mesh->PerformNodeMerge(p_node_a,p_node_b);
@@ -136,7 +137,7 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
 
                                 recheck_edges = true;
                             }
-                            else if(node_b_elem_indices.size() == 2)
+                            else if(node_b_elem_indices.size() >= 2)
                             {
                                 p_mesh->PerformNodeMerge(p_node_b,p_node_a);
                                 p_node_b->SetAsBoundaryNode(true);
@@ -149,9 +150,10 @@ void VertexBoundaryRefinementModifier<DIM>::RefineEdges(AbstractCellPopulation<D
                 }
             }
         }
+        p_mesh->ReMesh();
     }
 
-    p_mesh->ReMesh();
+    
 }
 
 
