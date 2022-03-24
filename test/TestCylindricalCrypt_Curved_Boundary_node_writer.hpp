@@ -72,7 +72,7 @@
 static const double M_END_STEADY_STATE = 100; //100
 static const double M_END_TIME = 1000; //1100
 static const double M_DT_TIME = 0.005;
-static const double M_SAMPLE_TIME = 20;
+static const double M_SAMPLE_TIME = 1;
 static const double M_CRYPT_DIAMETER = 6; //16
 static const double M_CRYPT_LENGTH = 10;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
@@ -132,7 +132,7 @@ public:
 
         RandomNumberGenerator::Instance()->Reseed(3);
 
-        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved_test_3";
+        std::string output_directory = M_HEAD_FOLDER + "/Vertex/Curved_test_6";
 
         // Create mesh
         CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);

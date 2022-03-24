@@ -742,17 +742,24 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
     VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
     
-
+    bool ReCheck_Mesh = true;
+    unsigned numb_times_here = 0;
+    while(ReCheck_Mesh)
+    {
+        ReCheck_Mesh = false;
         bool performed_edge_modifier = false;
 
-        // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
-        // TRACE("O_mesh");
-        // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-        // std::stringstream time;
-        // time << num_timesteps;
-        // PRINT_VARIABLE(num_timesteps);
-        // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "O_mesh", false);
-        // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+        PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
+        TRACE("O_mesh");
+        unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+        std::stringstream time;
+        time << num_timesteps;
+        std::stringstream t_numb_times_here;
+        t_numb_times_here << numb_times_here;
+        PRINT_VARIABLE(num_timesteps);
+        VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "O_mesh", false);
+        vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str() + "_" + t_numb_times_here.str());
+        numb_times_here++;
 
 
         /*
@@ -770,9 +777,10 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
         *   delete both vertex_A and Vertex_C and move vertex_B
         *   to their midpoint. 
         */
-        double distanceBetweenVerteciesThreshold = 0.075; //0.075
+        double distanceBetweenVerteciesThreshold = 0.02; //0.075
         double distanceToCommonVertexThreshold = 0.5; // must be greater than mMaxEdgeLength in VertexBoundaryRefinementModifier.cpp
         double mMarkedArea = 0.01;
+        double mThetaThreshold = 0.1;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
@@ -788,7 +796,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                     if(containing_element_indices.size() > 1)
                     {
                         
-
+                        bool is_boundary_in_multiple_elem = false;
                         unsigned node_index = node_iter->GetIndex();
                         std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
 
@@ -810,6 +818,16 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     boundary_neighbours.push_back(neighbour_index);
                                 }
 
+                            }
+                            else if(p_neighbour_node->IsBoundaryNode() && (element_index_set_n.size()==2) )
+                            {
+                                is_boundary_in_multiple_elem = true;
+                                c_vector<double, DIM> r_node_iter = node_iter->rGetLocation();
+                                c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
+                                if(norm_2(p_mesh->GetVectorFromAtoB(r_node_iter,r_neighbour)) < distanceToCommonVertexThreshold) 
+                                {
+                                    boundary_neighbours.push_back(neighbour_index);
+                                }
                             }
                         }
 
@@ -836,7 +854,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             * ----o       o -----           ------o-------
                             *
                             */
-                            if( containing_element_indices.size() == 3 )
+                            if( containing_element_indices.size() == 3 && is_boundary_in_multiple_elem==false)
                             {
                                 if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -844,16 +862,21 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_node->SetAsBoundaryNode(false);
 
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 3.1 cell edge stitch");
+                                    TRACE("Performed 3.1 cell edge stitch");
                                 }
 
                             }
-                            else
+                            else if(is_boundary_in_multiple_elem==false)
                             {
-                                if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
-                                {
-                                    c_vector<double, DIM> r_node = p_node->rGetLocation();
+                                c_vector<double, DIM> r_node = p_node->rGetLocation();
 
+                                c_vector<double, DIM> r_node_to_1 = p_mesh->GetVectorFromAtoB(r_neighbour_1,r_node);
+                                c_vector<double, DIM> r_node_to_2 = p_mesh->GetVectorFromAtoB(r_neighbour_2,r_node);
+            
+                                double cos_theta = ((r_node_to_1[0]*r_node_to_2[0] + r_node_to_1[1]*r_node_to_2[1])/(norm_2(r_node_to_1)*norm_2(r_node_to_2)));
+
+                                if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold || acos(cos_theta)< mThetaThreshold)  
+                                {
                                     double a = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_1));
                                     double b = norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_2));
                                     double c = norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2));
@@ -863,6 +886,10 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                     if(void_area < mMarkedArea)
                                     {
+                                        PRINT_VECTOR(r_node);
+                                        PRINT_VECTOR(r_neighbour_1);
+                                        PRINT_VECTOR(r_neighbour_2);
+                                        PRINT_VARIABLE(boundary_neighbours.size());
                                         // Delete neighbour 1
                                         std::set<unsigned> element_index_set_1 = p_neighbour_1->rGetContainingElementIndices();
                                         unsigned elem_index_1 = (*element_index_set_1.begin());
@@ -883,9 +910,30 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                         // PRINT_VECTOR(p_node->rGetLocation());
 
                                         performed_edge_modifier = true;
-                                        // TRACE("Performed 3.2 cell edge stitch");
+                                        TRACE("Performed 3.2 cell edge stitch");
                                     }
 
+                                }
+                            }
+                            else if(is_boundary_in_multiple_elem ==  true && containing_element_indices.size() == 2)
+                            {
+                                /* 
+                                *              \/
+                                *               o
+                                *    \ (cell) / |
+                                *     \      /  |
+                                *      \    /   |  (cell)
+                                *       \  /    |
+                                * (cell) \/ (v) |
+                                *   ------o     o----
+                                */
+                                if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
+                                {
+                                    p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
+                                    p_node->SetAsBoundaryNode(false);
+
+                                    performed_edge_modifier = true;
+                                    TRACE("Performed 3.15 cell edge stitch");
                                 }
                             }
                         }
@@ -937,7 +985,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with void");
+                                    TRACE("Performed 2 cell edge stitch with void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)
                                 {
@@ -945,7 +993,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with void");
+                                    TRACE("Performed 2 cell edge stitch with void");
                                 }
                             }
                             else if(element_index_1 == element_index_2)
@@ -956,7 +1004,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with void");
+                                    TRACE("Performed 2 cell edge stitch with void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_0)) < distanceBetweenVerteciesThreshold)
                                 {
@@ -964,7 +1012,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with void");
+                                    TRACE("Performed 2 cell edge stitch with void");
                                 }
                             }
                             else if(element_index_2 == element_index_0)
@@ -975,7 +1023,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with void");
+                                    TRACE("Performed 2 cell edge stitch with void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_1)) < distanceBetweenVerteciesThreshold)
                                 {
@@ -983,7 +1031,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with void");
+                                    TRACE("Performed 2 cell edge stitch with void");
                                 }
                             }
                             // TRACE("line 342");
@@ -1043,7 +1091,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1051,7 +1099,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_3);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_1)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1059,7 +1107,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_1);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1067,7 +1115,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_3);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                             }
                             else if(element_index_0 == element_index_2)
@@ -1078,7 +1126,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1086,7 +1134,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_3);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_1)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1094,7 +1142,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_1);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1102,7 +1150,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                             }
                             else if(element_index_0 == element_index_3)
@@ -1113,7 +1161,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_0,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1121,7 +1169,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_3,r_neighbour_1)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1129,7 +1177,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_3,p_neighbour_1);
                                     p_neighbour_3->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1137,7 +1185,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                             }
                             else if(element_index_1 == element_index_2)
@@ -1148,7 +1196,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1156,7 +1204,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_3);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_0)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1164,7 +1212,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_0);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1172,7 +1220,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                             }
                             else if(element_index_1 == element_index_3)
@@ -1183,7 +1231,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_1);
                                     p_neighbour_0->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1191,7 +1239,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_3,r_neighbour_0)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1199,7 +1247,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_3,p_neighbour_0);
                                     p_neighbour_3->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_2,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1207,7 +1255,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_2,p_neighbour_3);
                                     p_neighbour_2->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                             }
                             else if(element_index_2 == element_index_3)
@@ -1218,7 +1266,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_0,p_neighbour_2);
                                     p_neighbour_3->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1226,7 +1274,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_3,r_neighbour_0)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1234,7 +1282,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_3,p_neighbour_0);
                                     p_neighbour_3->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                                 else if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_3)) < distanceBetweenVerteciesThreshold)  
                                 {
@@ -1242,7 +1290,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_3);
                                     p_neighbour_1->SetAsBoundaryNode(true);
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 2 cell edge stitch with large void");
+                                    TRACE("Performed 2 cell edge stitch with large void");
                                 }
                             }
                             // TRACE("line 553");
@@ -1255,23 +1303,26 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
         if(performed_edge_modifier)
         {
+            ReCheck_Mesh = true;
             p_mesh->ReMesh();
-            // TRACE("1_mesh");
-            // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-            // std::stringstream time;
-            // time << num_timesteps;
-            // PRINT_VARIABLE(num_timesteps);
-            // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "1_mesh", false);
-            // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+            TRACE("1_mesh");
+            unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+            std::stringstream time;
+            time << num_timesteps;
+            PRINT_VARIABLE(num_timesteps);
+            VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "1_mesh", false);
+            vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
 
             // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
         }
 
         performed_edge_modifier = false;
-
-        double mDistanceFromNodeToNodeCheck = 0.1;
-        double mDistanceFromNodeToEdge = 0.025;
-        double mDistanceFromNodeTo2ndNodeCheck = sqrt(0.1*0.1 + mDistanceFromNodeToNodeCheck*mDistanceFromNodeToNodeCheck);
+        
+        double mDistanceFromNodeToEdge = 0.01;
+        double mMaxEdgeLength = 0.1005;
+        double mDistanceFromNodeToNodeCheck = 0.5*mMaxEdgeLength;
+        // double mDistanceFromNodeTo2ndNodeCheck = sqrt(mMaxEdgeLength*mMaxEdgeLength + mDistanceFromNodeToEdge*mDistanceFromNodeToEdge);
+        double mDistanceFromNodeTo2ndNodeCheck = 0.5*mMaxEdgeLength;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
@@ -1342,7 +1393,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                                 *      o----------o
                                                 *
                                                 * Need a way to implement this threshold:
-                                                */      
+                                                */
                                                 if(distance_to_edge < mDistanceFromNodeToEdge  && norm_2(p_mesh->GetVectorFromAtoB(r_node_1,r_neighbour)) < mDistanceFromNodeTo2ndNodeCheck)
                                                 {
                                                     // PRINT_VECTOR(r_neighbour);
@@ -1499,7 +1550,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                                     }
                                                     p_neighbour_node->SetAsBoundaryNode(is_boundary_neigh);
                                                     // PRINT_VARIABLE(is_boundary_neigh);
-                                                    // PRINT_VECTOR(p_neighbour_node->rGetLocation());
+                                                    PRINT_VECTOR(p_neighbour_node->rGetLocation());
 
                                                     
                                                     
@@ -1553,9 +1604,9 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                                     p_neighbour_1->SetAsBoundaryNode(is_boundary);
                                                     // PRINT_VARIABLE(is_boundary);
-                                                    // PRINT_VECTOR(p_neighbour_1->rGetLocation());
+                                                    PRINT_VECTOR(p_neighbour_1->rGetLocation());
                                                     performed_edge_modifier = true;
-                                                    // TRACE("Performed node merge into edge");
+                                                    TRACE("Performed node merge into edge");
                                                     break;
                                                 }
 
@@ -1585,15 +1636,16 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
         if(performed_edge_modifier)
         {
+            ReCheck_Mesh = true;
             // TRACE("Here");
             p_mesh->ReMesh();
-            // TRACE("11_mesh");
-            // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-            // std::stringstream time;
-            // time << num_timesteps;
-            // PRINT_VARIABLE(num_timesteps);
-            // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "11_mesh", false);
-            // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+            TRACE("11_mesh");
+            unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+            std::stringstream time;
+            time << num_timesteps;
+            PRINT_VARIABLE(num_timesteps);
+            VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "11_mesh", false);
+            vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
 
             // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
         }
@@ -1614,7 +1666,11 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
         *   then we delete vertex_A and move vertex_B to the midpoint
         *   of vertex_A-vertex_B
         */
-        double distanceToEdgeThreshold = 0.025;
+        double distanceToEdgeThreshold = 0.03;
+
+        double mMaxEdgeLength_1 = 0.1005;
+        double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength_1;
+        double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength_1;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
@@ -1656,7 +1712,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                             c_vector<double, DIM> r_neighbour_1 = p_neighbour_1->rGetLocation();
                             c_vector<double, DIM> r_neighbour_2 = p_neighbour_2->rGetLocation();
 
-                            if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2)) < 0.25 )
+                            if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1, r_neighbour_2)) < mMaxEdgeLength_1 )
                             {
                                 if(norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_2)) < norm_2(p_mesh->GetVectorFromAtoB(r_node, r_neighbour_1)) )
                                 {
@@ -1673,10 +1729,11 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                             p_element_2->DeleteNode(p_element_2->GetNodeLocalIndex(boundary_neighbours[1]));
                                             p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[1]);
 
+                                            PRINT_VARIABLE(r_neighbour_2);
                                             p_node->rGetModifiableLocation() = r_neighbour_2;
                                             p_node->SetAsBoundaryNode(true);
                                             performed_edge_modifier = true;
-                                            // TRACE("Performed node merge down edge");
+                                            TRACE("Performed node merge down edge");
                                         }
 
                                     }
@@ -1697,10 +1754,11 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                             p_element_1->DeleteNode(p_element_1->GetNodeLocalIndex(boundary_neighbours[0]));
                                             p_mesh->DeleteNodePriorToReMesh(boundary_neighbours[0]);
 
+                                            PRINT_VARIABLE(r_neighbour_1);
                                             p_node->rGetModifiableLocation() = r_neighbour_1;
                                             p_node->SetAsBoundaryNode(true);
                                             performed_edge_modifier = true;
-                                            // TRACE("Performed node merge down edge");
+                                            TRACE("Performed node merge down edge");
                                         }
                                     }
                                 }
@@ -1713,16 +1771,79 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
         if(performed_edge_modifier)
         {
+            ReCheck_Mesh = true;
             p_mesh->ReMesh();
-            // TRACE("2_mesh");
-            // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-            // std::stringstream time;
-            // time << num_timesteps;
-            // PRINT_VARIABLE(num_timesteps);
-            // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "2_mesh", false);
-            // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+            TRACE("2_mesh");
+            unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+            std::stringstream time;
+            time << num_timesteps;
+            PRINT_VARIABLE(num_timesteps);
+            VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "2_mesh", false);
+            vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
         }
         performed_edge_modifier = false;
+
+        // If any two boundary nodes get too close, merge them.
+        // double mMinDistance = 0.06;
+        // bool check_node_merges = true;
+        // while(check_node_merges)
+        // {
+        //     check_node_merges = false;
+        //     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
+        //         node_iter != p_mesh->GetNodeIteratorEnd();
+        //         ++node_iter)
+        //     {
+        //         if (node_iter->IsBoundaryNode())
+        //         {
+        //             c_vector<double, DIM> r_node = node_iter->rGetLocation();
+        //             unsigned node_index = node_iter->GetIndex();
+        //             std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+
+        //             for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+        //                 neighbour_iter != node_neighbours.end();
+        //                 ++neighbour_iter)
+        //             {
+        //                 unsigned neighbour_index = *neighbour_iter;
+        //                 Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+
+        //                 if(p_neighbour_node->IsBoundaryNode())
+        //                 {
+        //                     c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
+        //                     if(norm_2(p_mesh->GetVectorFromAtoB(r_node,r_neighbour)) < mMinDistance)
+        //                     {
+        //                         Node<DIM>* p_node = p_mesh->GetNode(node_index);
+
+        //                         p_mesh->PerformNodeMerge(p_node,p_neighbour_node);
+
+        //                         performed_edge_modifier = true;
+        //                         check_node_merges = true;
+        //                         break;
+        //                     }
+
+        //                 }
+        //             }
+                    
+        //         }
+        //         if(performed_edge_modifier)
+        //         {
+        //             break;
+        //         }
+        //     }
+        //     if(performed_edge_modifier)
+        //     {
+        //         p_mesh->ReMesh();
+        //         // TRACE("2_mesh");
+        //         // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+        //         // std::stringstream time;
+        //         // time << num_timesteps;
+        //         // PRINT_VARIABLE(num_timesteps);
+        //         // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "2_mesh", false);
+        //         // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+        //     }
+        //     performed_edge_modifier = false;
+        // }
+
+        
 
         // Might have this sometimes due to boundary node misslabelling... 
         /*  
@@ -1791,64 +1912,76 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                 p_mesh->DeleteNodePriorToReMesh(node_index);
 
                                 // Check if the boundary nodes need relabeling
-                                std::set<unsigned> node_neighbours_1 = p_cell_population->GetNeighbouringNodeIndices(node_neighbour_1);
-                                bool is_neighbour_node_1_boundary = false;
-                                unsigned numb_boundary_neighs_1 = 0;
-                                for (std::set<unsigned>::iterator neighbour_iter = node_neighbours_1.begin();
-                                                        neighbour_iter != node_neighbours_1.end();
-                                                        ++neighbour_iter)
+                                if(p_neighbour_node_1->IsBoundaryNode())
                                 {
-                                    unsigned node_neigh_index = *neighbour_iter;
-                                    Node<DIM>* p_node_iter = p_mesh->GetNode(node_neigh_index);
-                                    std::set<unsigned> containing_element_indices_neigh = p_node_iter->rGetContainingElementIndices();
-
-                                    if(p_node_iter->IsBoundaryNode() && node_neigh_index != node_index && containing_element_indices_neigh.size()==1)
+                                    std::set<unsigned> node_neighbours_1 = p_cell_population->GetNeighbouringNodeIndices(node_neighbour_1);
+                                    bool is_neighbour_node_1_boundary = false;
+                                    unsigned numb_boundary_neighs_1 = 0;
+                                    for (std::set<unsigned>::iterator neighbour_iter = node_neighbours_1.begin();
+                                                            neighbour_iter != node_neighbours_1.end();
+                                                            ++neighbour_iter)
                                     {
-                                        // PRINT_VECTOR(p_node_iter->rGetLocation());
+                                        unsigned node_neigh_index = *neighbour_iter;
+                                        Node<DIM>* p_node_iter = p_mesh->GetNode(node_neigh_index);
+                                        std::set<unsigned> containing_element_indices_neigh = p_node_iter->rGetContainingElementIndices();
+
+                                        if(p_node_iter->IsBoundaryNode() && node_neigh_index != node_index && containing_element_indices_neigh.size()==1)
+                                        {
+                                            // PRINT_VECTOR(p_node_iter->rGetLocation());
+                                            is_neighbour_node_1_boundary = true;
+                                        }
+                                        if(p_node_iter->IsBoundaryNode())
+                                        {
+                                            numb_boundary_neighs_1++;
+                                        }
+                                    }
+                                    if(is_neighbour_node_1_boundary==false && numb_boundary_neighs_1==(node_neighbours_1.size()-1))
+                                    {
                                         is_neighbour_node_1_boundary = true;
                                     }
-                                    if(p_node_iter->IsBoundaryNode())
+                                    else if(is_neighbour_node_1_boundary==false && numb_boundary_neighs_1==3)
                                     {
-                                        numb_boundary_neighs_1++;
+                                        is_neighbour_node_1_boundary = true;
                                     }
-                                }
-                                if(is_neighbour_node_1_boundary==false && numb_boundary_neighs_1==(node_neighbours_1.size()-1))
-                                {
-                                    is_neighbour_node_1_boundary = true;
-                                }
-                                p_neighbour_node_1->SetAsBoundaryNode(is_neighbour_node_1_boundary);
+                                    p_neighbour_node_1->SetAsBoundaryNode(is_neighbour_node_1_boundary);
                                 // PRINT_VARIABLE(is_neighbour_node_1_boundary);
-
-                                std::set<unsigned> node_neighbours_2 = p_cell_population->GetNeighbouringNodeIndices(node_neighbour_2);
-                                bool is_neighbour_node_2_boundary = false;
-                                unsigned numb_boundary_neighs_2 = 0;
-                                for (std::set<unsigned>::iterator neighbour_iter = node_neighbours_2.begin();
-                                                        neighbour_iter != node_neighbours_2.end();
-                                                        ++neighbour_iter)
+                                }
+                                if(p_neighbour_node_2->IsBoundaryNode())
                                 {
-                                    unsigned node_neigh_index = *neighbour_iter;
-                                    Node<DIM>* p_node_iter = p_mesh->GetNode(node_neigh_index);
-                                    std::set<unsigned> containing_element_indices_neigh = p_node_iter->rGetContainingElementIndices();
-
-                                    if(p_node_iter->IsBoundaryNode() && node_neigh_index != node_index && containing_element_indices_neigh.size()==1)
+                                    std::set<unsigned> node_neighbours_2 = p_cell_population->GetNeighbouringNodeIndices(node_neighbour_2);
+                                    bool is_neighbour_node_2_boundary = false;
+                                    unsigned numb_boundary_neighs_2 = 0;
+                                    for (std::set<unsigned>::iterator neighbour_iter = node_neighbours_2.begin();
+                                                            neighbour_iter != node_neighbours_2.end();
+                                                            ++neighbour_iter)
                                     {
-                                        // PRINT_VECTOR(p_node_iter->rGetLocation());
+                                        unsigned node_neigh_index = *neighbour_iter;
+                                        Node<DIM>* p_node_iter = p_mesh->GetNode(node_neigh_index);
+                                        std::set<unsigned> containing_element_indices_neigh = p_node_iter->rGetContainingElementIndices();
+
+                                        if(p_node_iter->IsBoundaryNode() && node_neigh_index != node_index && containing_element_indices_neigh.size()==1)
+                                        {
+                                            // PRINT_VECTOR(p_node_iter->rGetLocation());
+                                            is_neighbour_node_2_boundary = true;
+                                        }
+                                        if(p_node_iter->IsBoundaryNode())
+                                        {
+                                            numb_boundary_neighs_2++;
+                                        }
+                                    }
+                                    if(is_neighbour_node_2_boundary==false && numb_boundary_neighs_2==(node_neighbours_2.size()-1))
+                                    {
                                         is_neighbour_node_2_boundary = true;
                                     }
-                                    if(p_node_iter->IsBoundaryNode())
+                                    else if(is_neighbour_node_2_boundary==false && numb_boundary_neighs_2==3)
                                     {
-                                        numb_boundary_neighs_2++;
+                                        is_neighbour_node_2_boundary = true;
                                     }
-                                }
-                                if(is_neighbour_node_2_boundary==false && numb_boundary_neighs_2==(node_neighbours_1.size()-1))
-                                {
-                                    is_neighbour_node_2_boundary = true;
-                                }
-                                p_neighbour_node_2->SetAsBoundaryNode(is_neighbour_node_2_boundary);
+                                    p_neighbour_node_2->SetAsBoundaryNode(is_neighbour_node_2_boundary);
                                 // PRINT_VARIABLE(is_neighbour_node_2_boundary);
-
+                                }
                                 performed_edge_modifier = true;
-                                // TRACE("remove internal node");
+                                TRACE("remove internal node");
                             }
                         }
                     }
@@ -1857,14 +1990,15 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
         }
         if(performed_edge_modifier)
         {
+            ReCheck_Mesh = true;
             p_mesh->ReMesh();
-            // TRACE("3_mesh");
-            // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-            // std::stringstream time;
-            // time << num_timesteps;
-            // PRINT_VARIABLE(num_timesteps);
-            // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "3_mesh", false);
-            // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+            TRACE("3_mesh");
+            unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+            std::stringstream time;
+            time << num_timesteps;
+            PRINT_VARIABLE(num_timesteps);
+            VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "3_mesh", false);
+            vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
         }
         performed_edge_modifier = false;
         bool performed_edge_modifier_2 = false;
@@ -1916,7 +2050,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
                                 
                                 if(performed_edge_modifier)
                                 {
-                                    // TRACE("Performed Void Removel");
+                                    TRACE("Performed Void Removel");
                                 }
                             }
                             else if(p_neighbour_node_3->IsBoundaryNode() && p_neighbour_node_2->IsBoundaryNode() && IsNodeABNeighbours(node_neighbour_3,node_neighbour_2, rCellPopulation ))
@@ -1925,7 +2059,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                 if(performed_edge_modifier)
                                 {
-                                    // TRACE("Performed Void Removel");
+                                    TRACE("Performed Void Removel");
                                 }
                             }
                             else if(p_neighbour_node_1->IsBoundaryNode() && p_neighbour_node_3->IsBoundaryNode() && IsNodeABNeighbours(node_neighbour_1,node_neighbour_3, rCellPopulation ))
@@ -1934,7 +2068,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                 if(performed_edge_modifier)
                                 {
-                                    // TRACE("Performed Void Removel");
+                                    TRACE("Performed Void Removel");
                                 }
                             }
 
@@ -1957,7 +2091,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                     if(performed_edge_modifier_2)
                                     {
-                                        // TRACE("Performed Void 2 Removel");
+                                        TRACE("Performed Void 2 Removel");
                                     }
                                 }
                                 else if(p_neighbour_node_1->IsBoundaryNode() && p_neighbour_node_3->IsBoundaryNode() && !(IsNodeABNeighbours(node_neighbour_1,node_neighbour_3, rCellPopulation)) )
@@ -1966,7 +2100,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                     if(performed_edge_modifier_2)
                                     {
-                                        // TRACE("Performed Void 2 Removel");
+                                        TRACE("Performed Void 2 Removel");
                                     }
                                 }
                                 else if(p_neighbour_node_3->IsBoundaryNode() && p_neighbour_node_2->IsBoundaryNode() && !(IsNodeABNeighbours(node_neighbour_3,node_neighbour_2, rCellPopulation)) )
@@ -1975,7 +2109,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                     if(performed_edge_modifier_2)
                                     {
-                                        // TRACE("Performed Void 2 Removel");
+                                        TRACE("Performed Void 2 Removel");
                                     }
                                 }
                             }
@@ -2083,7 +2217,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                                 
                                 performed_edge_modifier = true;
-                                // TRACE("Performed 1 node Void Removel");
+                                TRACE("Performed 1 node Void Removel");
                                 
                             }
                         }
@@ -2095,14 +2229,15 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
         if(performed_edge_modifier || performed_edge_modifier_2)
         {
+            ReCheck_Mesh = true;
             p_mesh->ReMesh();
-            // TRACE("4_mesh");
-            // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-            // std::stringstream time;
-            // time << num_timesteps;
-            // PRINT_VARIABLE(num_timesteps);
-            // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "4_mesh", false);
-            // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+            TRACE("4_mesh");
+            unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+            std::stringstream time;
+            time << num_timesteps;
+            PRINT_VARIABLE(num_timesteps);
+            VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "4_mesh", false);
+            vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
         }
 
 
@@ -2234,6 +2369,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
             }
         }
     // TRACE("Done");
+    }
 }
 
 template<unsigned DIM>

@@ -41,8 +41,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<unsigned DIM>
 VertexBoundaryRefinementModifier<DIM>::VertexBoundaryRefinementModifier()
     : AbstractCellBasedSimulationModifier<DIM>(),
-      mMaxEdgeLength(0.20),
-      mMinEdgeLength(0.05) // Note: must be <= mCellRearrangementThreshold
+      mMaxEdgeLength(0.10),
+      mMinEdgeLength(0.025) // Note: must be <= mCellRearrangementThreshold
 {
 }
 
