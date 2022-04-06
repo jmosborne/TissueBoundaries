@@ -43,7 +43,7 @@
 #include "VolumeTrackingModifier.hpp"
 #include "WntConcentrationModifier.hpp"
 #include "SmoothVertexEdgesModifier.hpp"
-#include "JaggedVertexEdgesModifier.hpp"
+#include "JaggedVertexEdgesModifier.hpp" 
 #include "CurvedVertexEdgesModifier.hpp"
 #include "RandomDirectionVertexBasedDivisionRule.hpp"
 
