@@ -65,8 +65,19 @@ class FullVertexEdgesModifier : public AbstractCellBasedSimulationModifier<DIM,D
     void serialize(Archive & archive, const unsigned int version)
     {
         archive & boost::serialization::base_object<AbstractCellBasedSimulationModifier<DIM,DIM> >(*this);
+        archive & mMaxEdgeLength;
+        archive & mMinEdgeLength;
     }
-    
+    /**
+     * The longest an edge can be.
+     */
+    double mMaxEdgeLength;
+
+    /**
+     * The smallest an edge can be.
+     */
+    double mMinEdgeLength;
+
 public:
 
     /**
@@ -111,9 +122,11 @@ public:
      *
      * @param rCellPopulation reference to the cell population
      */
-    bool SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    // bool SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    bool SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
 
-    bool RefineEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    // bool RefineEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    bool RefineEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
 
     /**
      * Overridden OutputSimulationModifierParameters() method.

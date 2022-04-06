@@ -42,9 +42,8 @@
 #include "SimpleTargetAreaModifier.hpp"
 #include "VolumeTrackingModifier.hpp"
 #include "WntConcentrationModifier.hpp"
-#include "VertexBoundaryRefinementModifier.hpp"
 #include "SmoothVertexEdgesModifier.hpp"
-#include "VertexEdgesModifier.hpp"
+#include "FullVertexEdgesModifier.hpp"
 #include "RandomDirectionVertexBasedDivisionRule.hpp"
 
 
@@ -65,8 +64,8 @@
 
 static const double M_END_STEADY_STATE = 100; //100
 static const double M_END_TIME = 10000; //1100
-static const double M_DT_TIME = 1.0/200.0;//0.001;
-static const double M_SAMPLE_TIME = 200;
+static const double M_DT_TIME = 0.001;//0.001;
+static const double M_SAMPLE_TIME = 100;
 static const double M_CRYPT_DIAMETER = 6; //16
 static const double M_CRYPT_LENGTH = 6;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
@@ -550,7 +549,8 @@ public:
                 bool is_flat_bottom = true; // only different here with jagged is this.
                 CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, is_flat_bottom);
                 Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
-                p_mesh->SetCellRearrangementThreshold(0.1);
+                p_mesh->SetCellRearrangementThreshold(0.05);
+                p_mesh->SetCellRearrangementRatio(1.5);
 
                 // Create cells
                 std::vector<CellPtr> cells;
@@ -650,7 +650,8 @@ public:
                 bool is_flat_bottom = false; // only different here with smoothed is this.
                 CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, is_flat_bottom);
                 Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
-                p_mesh->SetCellRearrangementThreshold(0.1);
+                p_mesh->SetCellRearrangementThreshold(0.05);
+                p_mesh->SetCellRearrangementRatio(1.5);
 
                 // Create cells
                 std::vector<CellPtr> cells;
@@ -746,8 +747,8 @@ public:
                 CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
                 Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
                 p_mesh->SetCellRearrangementThreshold(0.05);
-                p_mesh->SetCellRearrangementRatio(1.35);
-
+                p_mesh->SetCellRearrangementRatio(1.5);
+                
                 // Create cells
                 std::vector<CellPtr> cells;
                 GenerateCells(p_mesh->GetNumElements(),cells,1.0,M_CONTACT_INHIBITION_LEVEL); //mature_volume = 1.0
@@ -779,13 +780,9 @@ public:
                 MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
                 simulator.AddSimulationModifier(p_modifier);
 
-                // Refine the edges on boundary to get smooth edges
-                MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
+                // Refine the edges on boundary to get smooth edges, and fix T1, T2 and T3 swaps:
+                MAKE_PTR(FullVertexEdgesModifier<2>, refinement_modifier);
                 simulator.AddSimulationModifier(refinement_modifier);
-
-                // Fix some of the edge cases which cause problems...
-                MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
-                simulator.AddSimulationModifier(edge_modifier);
 
                 // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
                 MAKE_PTR(NagaiHondaForce<2>, p_force);
@@ -816,9 +813,6 @@ public:
                 {
                     std::cout << "\n Vertex Curved Run " << sim_index << " Aborted \n" << std::flush;
                 }
-
-                MAKE_PTR(VertexEdgesModifier<2>, edge_modifier);
-                simulator.AddSimulationModifier(edge_modifier);
 
                 // Mark Ancestors
                 simulator.rGetCellPopulation().SetCellAncestorsToLocationIndices();
