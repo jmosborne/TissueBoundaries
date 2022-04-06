@@ -63,7 +63,7 @@
  */
 
 static const double M_END_STEADY_STATE = 100; //100
-static const double M_END_TIME = 10000; //1100
+static const double M_END_TIME = 1000; //1100
 static const double M_DT_TIME = 0.001;//0.001;
 static const double M_SAMPLE_TIME = 100;
 static const double M_CRYPT_DIAMETER = 6; //16
