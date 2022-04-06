@@ -43,7 +43,8 @@
 #include "VolumeTrackingModifier.hpp"
 #include "WntConcentrationModifier.hpp"
 #include "SmoothVertexEdgesModifier.hpp"
-#include "FullVertexEdgesModifier.hpp"
+#include "JaggedVertexEdgesModifier.hpp"
+#include "CurvedVertexEdgesModifier.hpp"
 #include "RandomDirectionVertexBasedDivisionRule.hpp"
 
 
@@ -62,8 +63,8 @@
  *  This is where you can set parameters to be used in all the simulations.
  */
 
-static const double M_END_STEADY_STATE = 100; //100
-static const double M_END_TIME = 1000; //1100
+static const double M_END_STEADY_STATE = 1; //100
+static const double M_END_TIME = 10; //1100
 static const double M_DT_TIME = 0.001;//0.001;
 static const double M_SAMPLE_TIME = 100;
 static const double M_CRYPT_DIAMETER = 6; //16
@@ -118,14 +119,14 @@ public:
     {
         
         //Command line argument stuff: Get the seed parameters  
-		TS_ASSERT(CommandLineArguments::Instance()->OptionExists("-run_index"));
-        unsigned start_index = CommandLineArguments::Instance()->GetUnsignedCorrespondingToOption("-run_index");
+		// TS_ASSERT(CommandLineArguments::Instance()->OptionExists("-run_index"));
+        // unsigned start_index = CommandLineArguments::Instance()->GetUnsignedCorrespondingToOption("-run_index");
 		
-		TS_ASSERT(CommandLineArguments::Instance()->OptionExists("-num_runs"));
-        unsigned num_runs = CommandLineArguments::Instance()->GetUnsignedCorrespondingToOption("-num_runs");
+		// TS_ASSERT(CommandLineArguments::Instance()->OptionExists("-num_runs"));
+        // unsigned num_runs = CommandLineArguments::Instance()->GetUnsignedCorrespondingToOption("-num_runs");
 		
-// unsigned start_index = 0;
-// unsigned num_runs = 2;
+        unsigned start_index = 0;
+        unsigned num_runs = 2;
 
         // Loop over the random seed.
 		for(unsigned sim_index=start_index; sim_index < start_index + num_runs; sim_index++)
@@ -684,6 +685,10 @@ public:
                 MAKE_PTR(VolumeTrackingModifier<2>, p_modifier);
                 simulator.AddSimulationModifier(p_modifier);
 
+                // Refine the edges on boundary to get accurate edges
+                MAKE_PTR(JaggedVertexEdgesModifier<2>, refinement_modifier);
+                simulator.AddSimulationModifier(refinement_modifier);
+
                 // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
                 MAKE_PTR(NagaiHondaForce<2>, p_force);
                 p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
@@ -781,7 +786,7 @@ public:
                 simulator.AddSimulationModifier(p_modifier);
 
                 // Refine the edges on boundary to get smooth edges, and fix T1, T2 and T3 swaps:
-                MAKE_PTR(FullVertexEdgesModifier<2>, refinement_modifier);
+                MAKE_PTR(CurvedVertexEdgesModifier<2>, refinement_modifier);
                 simulator.AddSimulationModifier(refinement_modifier);
 
                 // Create Forces and pass to simulation NOTE : these are not the default ones and chosen to give a stable growing monolayer
