@@ -33,16 +33,16 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "BernoulliTrialWithContactInhibitionCellCycleModel.hpp"
+#include "ModifiedBernoulliTrialWithContactInhibitionCellCycleModel.hpp"
 #include "RandomNumberGenerator.hpp"
-#include "CellLabel.hpp"
+// #include "CellLabel.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
 #include "StemCellProliferativeType.hpp"
 #include "TransitCellProliferativeType.hpp"
 
 #include "Debug.hpp"
 
-BernoulliTrialWithContactInhibitionCellCycleModel::BernoulliTrialWithContactInhibitionCellCycleModel()
+ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::ModifiedBernoulliTrialWithContactInhibitionCellCycleModel()
     : AbstractCellCycleModel(),
       mQuiescentVolumeFraction(DOUBLE_UNSET),
       mEquilibriumVolume(DOUBLE_UNSET),
@@ -55,7 +55,7 @@ BernoulliTrialWithContactInhibitionCellCycleModel::BernoulliTrialWithContactInhi
 {
 }
 
-BernoulliTrialWithContactInhibitionCellCycleModel::BernoulliTrialWithContactInhibitionCellCycleModel(const BernoulliTrialWithContactInhibitionCellCycleModel& rModel)
+ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::ModifiedBernoulliTrialWithContactInhibitionCellCycleModel(const ModifiedBernoulliTrialWithContactInhibitionCellCycleModel& rModel)
    : AbstractCellCycleModel(rModel),
       mQuiescentVolumeFraction(rModel.mQuiescentVolumeFraction),
       mEquilibriumVolume(rModel.mEquilibriumVolume),
@@ -74,9 +74,12 @@ BernoulliTrialWithContactInhibitionCellCycleModel::BernoulliTrialWithContactInhi
      */
 }
 
-bool BernoulliTrialWithContactInhibitionCellCycleModel::ReadyToDivide()
+bool ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::ReadyToDivide()
 {
     assert(mpCell != nullptr);
+
+    bool is_cell_labelled = false;
+
 
     if (!(mpCell->GetCellProliferativeType()->IsType<DifferentiatedCellProliferativeType>()))
     {
@@ -84,16 +87,18 @@ bool BernoulliTrialWithContactInhibitionCellCycleModel::ReadyToDivide()
         double cell_volume = mpCell->GetCellData()->GetItem("volume");
         double quiescent_volume = mEquilibriumVolume * mQuiescentVolumeFraction;
 
+
+
         if (cell_volume < quiescent_volume)
         {
             // Update the duration of the current period of contact inhibition.
             mCurrentQuiescentDuration = SimulationTime::Instance()->GetTime() - mCurrentQuiescentOnsetTime;
 
             // Update labels
-            mpCell->RemoveCellProperty<CellLabel>();
-            boost::shared_ptr<AbstractCellProperty> p_label = mpCell->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<CellLabel>();
-            // PRINT_VARIABLE(p_label->GetColour());
-            mpCell->AddCellProperty(p_label);
+            // mpCell->RemoveCellProperty<CellLabel>();
+            // boost::shared_ptr<AbstractCellProperty> p_label = mpCell->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<CellLabel>();
+            // mpCell->AddCellProperty(p_label);
+            is_cell_labelled = true;
 
             // Increase cell cycle duration
             double dt = SimulationTime::Instance()->GetTimeStep();
@@ -105,14 +110,16 @@ bool BernoulliTrialWithContactInhibitionCellCycleModel::ReadyToDivide()
             // Reset the cell's quiescent duration and update the time at which the onset of quiescent occurs
             mCurrentQuiescentDuration = 0.0;
             mCurrentQuiescentOnsetTime = SimulationTime::Instance()->GetTime();
-            mpCell->RemoveCellProperty<CellLabel>();
+            // mpCell->RemoveCellProperty<CellLabel>();
+            is_cell_labelled = false;
         }
     }
 
     if (!mReadyToDivide)
     {
         double dt = SimulationTime::Instance()->GetTimeStep();
-        if (mpCell->GetCellProliferativeType()->IsType<StemCellProliferativeType>() && !(mpCell->HasCellProperty<CellLabel>()))
+        // if (mpCell->GetCellProliferativeType()->IsType<StemCellProliferativeType>() && !(mpCell->HasCellProperty<CellLabel>()))
+        if (mpCell->GetCellProliferativeType()->IsType<StemCellProliferativeType>() && !(is_cell_labelled))
         {
             if (GetAge() > mStemCellMinimumDivisionAge)
             {
@@ -123,7 +130,8 @@ bool BernoulliTrialWithContactInhibitionCellCycleModel::ReadyToDivide()
                 }
             }
         }
-        if (mpCell->GetCellProliferativeType()->IsType<TransitCellProliferativeType>() && !(mpCell->HasCellProperty<CellLabel>()))
+        // if (mpCell->GetCellProliferativeType()->IsType<TransitCellProliferativeType>() && !(mpCell->HasCellProperty<CellLabel>()))
+        if (mpCell->GetCellProliferativeType()->IsType<TransitCellProliferativeType>() && !(is_cell_labelled))
         {
             if (GetAge() > mTransitCellMinimumDivisionAge)
             {
@@ -139,92 +147,92 @@ bool BernoulliTrialWithContactInhibitionCellCycleModel::ReadyToDivide()
     return mReadyToDivide;
 }
 
-AbstractCellCycleModel* BernoulliTrialWithContactInhibitionCellCycleModel::CreateCellCycleModel()
+AbstractCellCycleModel* ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::CreateCellCycleModel()
 {
-    return new BernoulliTrialWithContactInhibitionCellCycleModel(*this);
+    return new ModifiedBernoulliTrialWithContactInhibitionCellCycleModel(*this);
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::SetQuiescentVolumeFraction(double quiescentVolumeFraction)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::SetQuiescentVolumeFraction(double quiescentVolumeFraction)
 {
     mQuiescentVolumeFraction = quiescentVolumeFraction;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetQuiescentVolumeFraction() const
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetQuiescentVolumeFraction() const
 {
     return mQuiescentVolumeFraction;
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::SetEquilibriumVolume(double equilibriumVolume)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::SetEquilibriumVolume(double equilibriumVolume)
 {
     mEquilibriumVolume = equilibriumVolume;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetEquilibriumVolume() const
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetEquilibriumVolume() const
 {
     return mEquilibriumVolume;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetCurrentQuiescentDuration() const
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetCurrentQuiescentDuration() const
 {
     return mCurrentQuiescentDuration;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetCurrentQuiescentOnsetTime() const
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetCurrentQuiescentOnsetTime() const
 {
     return mCurrentQuiescentOnsetTime;
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::SetStemCellDivisionProbability(double stemCellDivisionProbability)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::SetStemCellDivisionProbability(double stemCellDivisionProbability)
 {
     mStemCellDivisionProbability = stemCellDivisionProbability;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetStemCellDivisionProbability()
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetStemCellDivisionProbability()
 {
     return mStemCellDivisionProbability;
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::SetStemCellMinimumDivisionAge(double stemCellMinimumDivisionAge)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::SetStemCellMinimumDivisionAge(double stemCellMinimumDivisionAge)
 {
     mStemCellMinimumDivisionAge = stemCellMinimumDivisionAge;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetStemCellMinimumDivisionAge()
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetStemCellMinimumDivisionAge()
 {
     return mStemCellMinimumDivisionAge;
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::SetTransitCellDivisionProbability(double transitCellDivisionProbability)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::SetTransitCellDivisionProbability(double transitCellDivisionProbability)
 {
     mTransitCellDivisionProbability = transitCellDivisionProbability;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetTransitCellDivisionProbability()
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetTransitCellDivisionProbability()
 {
     return mTransitCellDivisionProbability;
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::SetTransitCellMinimumDivisionAge(double transitCellMinimumDivisionAge)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::SetTransitCellMinimumDivisionAge(double transitCellMinimumDivisionAge)
 {
     mTransitCellMinimumDivisionAge = transitCellMinimumDivisionAge;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetTransitCellMinimumDivisionAge()
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetTransitCellMinimumDivisionAge()
 {
     return mTransitCellMinimumDivisionAge;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetAverageTransitCellCycleTime()
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetAverageTransitCellCycleTime()
 {
     return mTransitCellMinimumDivisionAge + 1.0/mTransitCellDivisionProbability;
 }
 
-double BernoulliTrialWithContactInhibitionCellCycleModel::GetAverageStemCellCycleTime()
+double ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::GetAverageStemCellCycleTime()
 {
     return mStemCellMinimumDivisionAge + 1.0/mStemCellDivisionProbability;
 }
 
-void BernoulliTrialWithContactInhibitionCellCycleModel::OutputCellCycleModelParameters(out_stream& rParamsFile)
+void ModifiedBernoulliTrialWithContactInhibitionCellCycleModel::OutputCellCycleModelParameters(out_stream& rParamsFile)
 {
     *rParamsFile << "\t\t\t<QuiescentVolumeFraction>" << mQuiescentVolumeFraction << "</QuiescentVolumeFraction>\n";
     *rParamsFile << "\t\t\t<EquilibriumVolume>" << mEquilibriumVolume << "</EquilibriumVolume>\n";
@@ -235,4 +243,4 @@ void BernoulliTrialWithContactInhibitionCellCycleModel::OutputCellCycleModelPara
 
 // Serialization for Boost >= 1.36
 #include "SerializationExportWrapperForCpp.hpp"
-CHASTE_CLASS_EXPORT(BernoulliTrialWithContactInhibitionCellCycleModel)
+CHASTE_CLASS_EXPORT(ModifiedBernoulliTrialWithContactInhibitionCellCycleModel)

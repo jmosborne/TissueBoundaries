@@ -234,16 +234,16 @@ bool JaggedVertexEdgesModifier<DIM>::Remove3NodeVoid(bool performed_edge_mod,uns
                         {
                             if(global_node_neigh == node_A_index)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
-                                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
-                                if(containing_elements.size() == 1)
-                                {
-                                    if(p_node->IsBoundaryNode())
+                                Node<DIM>* p_node_1 = p_mesh->GetNode(global_node_index);
+                                // std::set<unsigned> containing_elements = p_node_1->rGetContainingElementIndices();
+                                // if(containing_elements.size() == 1)
+                                // {
+                                    if(p_node_1->IsBoundaryNode())
                                     {   
                                         is_boundary = true;
                                         break;
                                     }
-                                }
+                                // }
                             }
                         }
                                             
@@ -271,16 +271,16 @@ bool JaggedVertexEdgesModifier<DIM>::Remove3NodeVoid(bool performed_edge_mod,uns
                         {
                             if(global_node_neigh == node_B_index)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
-                                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
-                                if(containing_elements.size() == 1)
-                                {
-                                    if(p_node->IsBoundaryNode())
+                                Node<DIM>* p_node_1 = p_mesh->GetNode(global_node_index);
+                                // std::set<unsigned> containing_elements = p_node_1->rGetContainingElementIndices();
+                                // if(containing_elements.size() == 1)
+                                // {
+                                    if(p_node_1->IsBoundaryNode())
                                     {
                                         is_boundary = true;
                                         break;
                                     }
-                                }
+                                // }
                             }
                         }
                                                 
@@ -310,16 +310,16 @@ bool JaggedVertexEdgesModifier<DIM>::Remove3NodeVoid(bool performed_edge_mod,uns
                         {
                             if(global_node_neigh == node_C_index)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(global_node_index);
-                                std::set<unsigned> containing_elements = p_node->rGetContainingElementIndices();
-                                if(containing_elements.size() == 1)
-                                {
-                                    if(p_node->IsBoundaryNode())
+                                Node<DIM>* p_node_1 = p_mesh->GetNode(global_node_index);
+                                // std::set<unsigned> containing_elements = p_node_1->rGetContainingElementIndices();
+                                // if(containing_elements.size() == 1)
+                                // {
+                                    if(p_node_1->IsBoundaryNode())
                                     {
                                         is_boundary = true;
                                         break;
                                     }
-                                }
+                                // }
                             }
                         }
                                                 
@@ -376,8 +376,13 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         ReCheck_Mesh = false;
         bool performed_edge_modifier = false;
 
+        // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+        //     std::stringstream time;
+        //     time << num_timesteps;
+        //     PRINT_VARIABLE(num_timesteps);
 
 
+            
 
         /*
         *        |                              |
@@ -399,7 +404,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         double mMarkedArea = 0.01;
         double mThetaThreshold = 0.28; //Sepration of ~ 0.0098..
         // TRACE("Checking stitches");
-        if(false)
+        if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
                 node_iter != p_mesh->GetNodeIteratorEnd();
@@ -480,7 +485,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
                                     p_node->SetAsBoundaryNode(false);
 
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 3.1 cell edge stitch");
+                                    TRACE("Performed 3.1 cell edge stitch");
                                     break;
                                 }
 
@@ -548,7 +553,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
                                     p_node->SetAsBoundaryNode(false);
 
                                     performed_edge_modifier = true;
-                                    // TRACE("Performed 3.15 cell edge stitch");
+                                    TRACE("Performed 3.15 cell edge stitch");
                                     break;
                                 }
                             }
@@ -1046,6 +1051,97 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         }
 
         performed_edge_modifier = false;
+
+        double distanceBetweenVerteciesThreshold_2 = 0.1; //0.075
+
+
+        if(true)
+        {
+            for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter_1 = p_mesh->GetNodeIteratorBegin();
+                node_iter_1 != p_mesh->GetNodeIteratorEnd();
+                ++node_iter_1)
+            {
+                if (node_iter_1->IsBoundaryNode())
+                {
+                    std::set<unsigned> containing_element_indices_1 = node_iter_1->rGetContainingElementIndices();
+                    
+                    if(containing_element_indices_1.size() == 2)
+                    {
+                        for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter_2 = p_mesh->GetNodeIteratorBegin();
+                        node_iter_2 != p_mesh->GetNodeIteratorEnd();
+                        ++node_iter_2)
+                        {
+                            unsigned node_index_1 = node_iter_1->GetIndex();
+                            unsigned node_index_2 = node_iter_2->GetIndex();
+
+                            if (node_iter_2->IsBoundaryNode() && node_index_1 != node_index_2 )
+                            {
+                                std::set<unsigned> containing_element_indices_2 = node_iter_2->rGetContainingElementIndices();
+                    
+                                if(containing_element_indices_2.size() == 2)
+                                {
+                                    c_vector<double, DIM> r_node_1 = node_iter_1->rGetLocation();
+                                    c_vector<double, DIM> r_node_2 = node_iter_2->rGetLocation();
+
+                                    if(norm_2(p_mesh->GetVectorFromAtoB(r_node_1,r_node_2)) < distanceBetweenVerteciesThreshold_2)
+                                    {
+                                        // PRINT_VECTOR(r_node_1);
+                                        // PRINT_VECTOR(r_node_2);
+                                        Node<DIM>* p_node_1 = p_mesh->GetNode(node_index_1);
+                                        Node<DIM>* p_node_2 = p_mesh->GetNode(node_index_2);
+
+                                        c_vector<double, DIM> r_node_12 = p_mesh->GetVectorFromAtoB(r_node_1,r_node_2);
+                                        r_node_12 = r_node_12/norm_2(r_node_12);
+                                        c_vector<double, DIM> r_orth_r_node_12 = zero_vector<double>(DIM);
+                                        r_orth_r_node_12[0] = r_node_12[1];
+                                        r_orth_r_node_12[1] = r_node_12[0];
+
+                                        p_node_1->rGetModifiableLocation()[0] = r_node_1[0] + 0.09*r_orth_r_node_12[0];
+                                        p_node_1->rGetModifiableLocation()[1] = r_node_1[1] + 0.09*r_orth_r_node_12[1];
+
+                                        p_node_2->rGetModifiableLocation()[0] = r_node_2[0] - 0.09*r_orth_r_node_12[0];
+                                        p_node_2->rGetModifiableLocation()[1] = r_node_2[1] - 0.09*r_orth_r_node_12[1];
+
+                                        // p_mesh->PerformNodeMerge(p_node_1,p_node_2);
+
+                                        // p_node_1->SetAsBoundaryNode(true);
+                                        performed_edge_modifier = true;
+                                        break;
+
+                                    }
+
+
+                                }
+
+                            }
+                        }
+
+
+
+                    }
+                }
+            }
+        }
+        if(performed_edge_modifier)
+        {
+            ReCheck_Mesh = true;
+            // TRACE("Here");
+            p_mesh->ReMesh();
+            // TRACE("11_mesh");
+            // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+            // std::stringstream time;
+            // time << num_timesteps;
+            // PRINT_VARIABLE(num_timesteps);
+            // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "11_mesh", false);
+            // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+
+            // PRINT_VARIABLE(SimulationTime::Instance()->GetTime());
+        }
+        performed_edge_modifier = false;
+
+
+
+
         
         double mDistanceFromNodeToEdge = 0.015;
         double mMaxEdgeLength = 1.0;
@@ -1055,7 +1151,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         double mDistanceFromNodeTo2ndNodeCheck = 0.501*mMaxEdgeLength;
         // TRACE("Checking Edge Intercepts");
 
-        if(true)
+        if(false)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
                 node_iter != p_mesh->GetNodeIteratorEnd();
@@ -1279,7 +1375,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
                                                         }
                                                     }
                                                     // This is a stiched edge, which can somethimes happen.
-                                                    if(is_boundary_neigh==false && numb_boundary_neigh == node_2_neighbours.size())
+                                                    if(is_boundary_neigh==false && numb_boundary_neigh == (node_2_neighbours.size()-1))
                                                     {
                                                         is_boundary_neigh = true;
                                                     }
@@ -1331,8 +1427,11 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
                                                             }
                                                         }
                                                     }
+                                                    
+                                                    std::set<unsigned> node_neighbours_2 = p_cell_population->GetNeighbouringNodeIndices(node_index);
+
                                                     // This is a stiched edge, which can somethimes happen.
-                                                    if(is_boundary==false && numb_boundary_nodes == node_2_neighbours.size())
+                                                    if(is_boundary==false && numb_boundary_nodes == (node_neighbours_2.size()-1))
                                                     {
                                                         is_boundary = true;
                                                     }
@@ -1520,64 +1619,64 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         performed_edge_modifier = false;
 
         // If any two boundary nodes get too close, merge them.
-        // double mMinDistance = 0.06;
-        // bool check_node_merges = true;
-        // while(check_node_merges)
-        // {
-        //     check_node_merges = false;
-        //     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
-        //         node_iter != p_mesh->GetNodeIteratorEnd();
-        //         ++node_iter)
-        //     {
-        //         if (node_iter->IsBoundaryNode())
-        //         {
-        //             c_vector<double, DIM> r_node = node_iter->rGetLocation();
-        //             unsigned node_index = node_iter->GetIndex();
-        //             std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
+        double mMinDistance = 0.06;
+        bool check_node_merges = true;
+        while(check_node_merges)
+        {
+            check_node_merges = false;
+            for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
+                node_iter != p_mesh->GetNodeIteratorEnd();
+                ++node_iter)
+            {
+                if (node_iter->IsBoundaryNode())
+                {
+                    c_vector<double, DIM> r_node = node_iter->rGetLocation();
+                    unsigned node_index = node_iter->GetIndex();
+                    std::set<unsigned> node_neighbours = p_cell_population->GetNeighbouringNodeIndices(node_index);
 
-        //             for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
-        //                 neighbour_iter != node_neighbours.end();
-        //                 ++neighbour_iter)
-        //             {
-        //                 unsigned neighbour_index = *neighbour_iter;
-        //                 Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
+                    for (std::set<unsigned>::iterator neighbour_iter = node_neighbours.begin();
+                        neighbour_iter != node_neighbours.end();
+                        ++neighbour_iter)
+                    {
+                        unsigned neighbour_index = *neighbour_iter;
+                        Node<DIM>* p_neighbour_node = p_mesh->GetNode(neighbour_index);
 
-        //                 if(p_neighbour_node->IsBoundaryNode())
-        //                 {
-        //                     c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
-        //                     if(norm_2(p_mesh->GetVectorFromAtoB(r_node,r_neighbour)) < mMinDistance)
-        //                     {
-        //                         Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                        if(p_neighbour_node->IsBoundaryNode())
+                        {
+                            c_vector<double, DIM> r_neighbour = p_neighbour_node->rGetLocation();
+                            if(norm_2(p_mesh->GetVectorFromAtoB(r_node,r_neighbour)) < mMinDistance)
+                            {
+                                Node<DIM>* p_node = p_mesh->GetNode(node_index);
 
-        //                         p_mesh->PerformNodeMerge(p_node,p_neighbour_node);
+                                p_mesh->PerformNodeMerge(p_node,p_neighbour_node);
 
-        //                         performed_edge_modifier = true;
-        //                         check_node_merges = true;
-        //                         break;
-        //                     }
+                                performed_edge_modifier = true;
+                                check_node_merges = true;
+                                break;
+                            }
 
-        //                 }
-        //             }
+                        }
+                    }
                     
-        //         }
-        //         if(performed_edge_modifier)
-        //         {
-        //             break;
-        //         }
-        //     }
-        //     if(performed_edge_modifier)
-        //     {
-        //         p_mesh->ReMesh();
-        //         // TRACE("2_mesh");
-        //         // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
-        //         // std::stringstream time;
-        //         // time << num_timesteps;
-        //         // PRINT_VARIABLE(num_timesteps);
-        //         // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "2_mesh", false);
-        //         // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
-        //     }
-        //     performed_edge_modifier = false;
-        // }
+                }
+                if(performed_edge_modifier)
+                {
+                    break;
+                }
+            }
+            if(performed_edge_modifier)
+            {
+                p_mesh->ReMesh();
+                // TRACE("2_mesh");
+                // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+                // std::stringstream time;
+                // time << num_timesteps;
+                // PRINT_VARIABLE(num_timesteps);
+                // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "2_mesh", false);
+                // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+            }
+            performed_edge_modifier = false;
+        }
 
         
 
@@ -1594,7 +1693,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         */
         // i.e. internal nodes...
         // TRACE("Checking Internal Nods");
-        if(false)
+        if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
                 node_iter != p_mesh->GetNodeIteratorEnd();
@@ -1912,7 +2011,7 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
 
                                 p_neighbour_node_2->SetAsBoundaryNode(is_neighbour_node_2_boundary);
                                 // PRINT_VECTOR(p_neighbour_node_2->rGetLocation());
-                                // PRINT_VARIABLE(is_neighbour_node_2_boundary);
+                                // PRINT_2_VARIABLES(is_neighbour_node_1_boundary,is_neighbour_node_2_boundary);
 
                                 
                                 performed_edge_modifier = true;
@@ -2067,6 +2166,13 @@ bool JaggedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         }
     // TRACE("Done");
     // } //While
+    // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+    //         std::stringstream time;
+    //         time << num_timesteps;
+    //         // PRINT_VARIABLE(num_timesteps);
+    //         VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "1_mesh", false);
+    //         vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+
     return ReCheck_Mesh;
 }
 

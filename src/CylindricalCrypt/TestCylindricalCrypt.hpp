@@ -49,7 +49,6 @@
 
 
 #include "PlaneBasedCellKiller.hpp"
-#include "SmoothVMCellKiller.hpp"
 
 #include "PlaneBoundaryCondition.hpp"
 
@@ -65,9 +64,9 @@
  */
 
 static const double M_END_STEADY_STATE = 10; //100
-static const double M_END_TIME = 2; //1100
-static const double M_DT_TIME = 0.001;//0.001;
-static const double M_SAMPLE_TIME = 100;
+static const double M_END_TIME = 500; //1100
+static const double M_DT_TIME = 0.005;//0.001;
+static const double M_SAMPLE_TIME = 10;
 static const double M_CRYPT_DIAMETER = 10; //16
 static const double M_CRYPT_LENGTH = 10;
 static const double M_CONTACT_INHIBITION_LEVEL = 0.8;
@@ -75,7 +74,7 @@ static const double M_BOUNDARY_FORCE_STRENGTH = 50.0;
 static const double M_BOUNDARY_FORCE_CUTOFF = 1.0;
 
 
-static const std::string M_HEAD_FOLDER = "CylindricalCrypt";
+static const std::string M_HEAD_FOLDER = "CylindricalCrypt_R4";
 
 class TestCylindricalCrypt : public AbstractCellBasedWithTimingsTestSuite
 {
@@ -126,16 +125,16 @@ public:
 		// TS_ASSERT(CommandLineArguments::Instance()->OptionExists("-num_runs"));
         // unsigned num_runs = CommandLineArguments::Instance()->GetUnsignedCorrespondingToOption("-num_runs");
 		
-        unsigned start_index = 0;
-        unsigned num_runs = 1;
+        unsigned start_index = 100;
+        unsigned num_runs = 10;
 
-        bool m_Do_OS_all     = true;
-        bool m_Do_VM_Curved  = true;
-        bool m_Do_VM_Jagged  = true;
+        bool m_Do_OS_all     = false;
+        bool m_Do_VM_Curved  = false;
+        bool m_Do_VM_Jagged  = false;
         bool m_Do_VM_Smooth  = true;
-        bool m_Do_VT_Finite  = true;
-        bool m_Do_VT_Ghost   = true;
-        bool m_Do_VT_Ininite = true;
+        bool m_Do_VT_Finite  = false;
+        bool m_Do_VT_Ghost   = false;
+        bool m_Do_VT_Ininite = false;
 
         // Loop over the random seed.
 		for(unsigned sim_index=start_index; sim_index < start_index + num_runs; sim_index++)
@@ -610,7 +609,7 @@ public:
                 p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
                 p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
                 p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
-                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(2.0);
+                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
                 simulator.AddForce(p_force);
                 
                 MAKE_PTR(BoundaryForce<2>, p_boundary_force);
@@ -621,11 +620,6 @@ public:
                 // Sloughing killer
                 MAKE_PTR_ARGS(PlaneBasedCellKiller<2>, p_killer, (&cell_population, M_CRYPT_LENGTH*unit_vector<double>(2,1), unit_vector<double>(2,1)));
                 simulator.AddCellKiller(p_killer);
-
-                MAKE_PTR_ARGS(SmoothVMCellKiller<2>, p_killer_2, (&cell_population));
-                simulator.AddCellKiller(p_killer_2);
-
-                
 
                 // Run simulation
                 // try
@@ -717,7 +711,7 @@ public:
                 p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
                 p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
                 p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
-                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(2.0);
+                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
                 simulator.AddForce(p_force);
                 
                 MAKE_PTR(BoundaryForce<2>, p_boundary_force);
@@ -818,7 +812,7 @@ public:
                 p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
                 p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
                 p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
-                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(2.0);
+                p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(1.0);
                 simulator.AddForce(p_force);
                 
                 MAKE_PTR(BoundaryForce<2>, p_boundary_force);

@@ -33,8 +33,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef FullVertexEdgesModifier_HPP_
-#define FullVertexEdgesModifier_HPP_
+#ifndef CurvedVertexEdgesModifierSimplified_HPP_
+#define CurvedVertexEdgesModifierSimplified_HPP_
 
 #include "ChasteSerialization.hpp"
 #include <boost/serialization/base_object.hpp>
@@ -50,7 +50,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * Only for use with VertexBasedCellPopulation.
  */
 template<unsigned DIM>
-class FullVertexEdgesModifier : public AbstractCellBasedSimulationModifier<DIM,DIM>
+class CurvedVertexEdgesModifierSimplified : public AbstractCellBasedSimulationModifier<DIM,DIM>
 {
     /** Needed for serialization. */
     friend class boost::serialization::access;
@@ -83,12 +83,12 @@ public:
     /**
      * Default constructor.
      */
-    FullVertexEdgesModifier();
+    CurvedVertexEdgesModifierSimplified();
 
     /**
      * Destructor.
      */
-    virtual ~FullVertexEdgesModifier();
+    virtual ~CurvedVertexEdgesModifierSimplified();
 
     /**
      * Overridden UpdateAtEndOfTimeStep() method.
@@ -124,6 +124,17 @@ public:
      */
     // bool SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
     bool SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool CheckForVConfig(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool CheckFor3NodeVoids(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool CleanUpRogueNodes(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool CheckForInternalNode(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool CheckForNodeEdgeInt(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool CheckT3Distrupt(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool DirtyHack(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool ClearFreeInternalNodes(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+    bool RemoveFreeBoundedNode(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
+
+    
 
     // bool RefineEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
     bool RefineEdges(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here);
@@ -138,6 +149,6 @@ public:
 };
 
 #include "SerializationExportWrapper.hpp"
-EXPORT_TEMPLATE_CLASS_SAME_DIMS(FullVertexEdgesModifier)
+EXPORT_TEMPLATE_CLASS_SAME_DIMS(CurvedVertexEdgesModifierSimplified)
 
-#endif /*FullVertexEdgesModifier_HPP_*/
+#endif /*CurvedVertexEdgesModifierSimplified_HPP_*/

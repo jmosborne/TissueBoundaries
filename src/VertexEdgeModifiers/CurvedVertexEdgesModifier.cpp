@@ -83,6 +83,7 @@ void CurvedVertexEdgesModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulatio
             recheck_edges = false;
         }
     }
+    
 }
 
 template<unsigned DIM>
@@ -958,7 +959,7 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         *   delete both vertex_A and Vertex_C and move vertex_B
         *   to their midpoint. 
         */
-        double distanceBetweenVerteciesThreshold = 0.02; //0.075
+        double distanceBetweenVerteciesThreshold = 0.03; //0.075
         double distanceToCommonVertexThreshold = 0.5; // must be greater than mMaxEdgeLength in VertexBoundaryRefinementModifier.cpp
         double mMarkedArea = 0.01;
         double mThetaThreshold = 0.28; //Sepration of ~ 0.0098..
@@ -1038,7 +1039,14 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
                             */
                             if( containing_element_indices.size() == 3 && is_boundary_in_multiple_elem==false)
                             {
-                                if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold)  
+                                c_vector<double, DIM> r_node = p_node->rGetLocation();
+
+                                c_vector<double, DIM> r_node_to_1 = p_mesh->GetVectorFromAtoB(r_neighbour_1,r_node);
+                                c_vector<double, DIM> r_node_to_2 = p_mesh->GetVectorFromAtoB(r_neighbour_2,r_node);
+            
+                                double cos_theta = ((r_node_to_1[0]*r_node_to_2[0] + r_node_to_1[1]*r_node_to_2[1])/(norm_2(r_node_to_1)*norm_2(r_node_to_2)));
+
+                                if(norm_2(p_mesh->GetVectorFromAtoB(r_neighbour_1,r_neighbour_2)) < distanceBetweenVerteciesThreshold  || acos(cos_theta)< mThetaThreshold) 
                                 {
                                     p_mesh->PerformNodeMerge(p_neighbour_1,p_neighbour_2);
                                     p_node->SetAsBoundaryNode(false);
@@ -1613,10 +1621,10 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         
         double mDistanceFromNodeToEdge = 0.015;
         // double mMaxEdgeLength = 0.100;
-        double mDistanceFromNodeToNodeCheck = 0.501*mMaxEdgeLength;
+        double mDistanceFromNodeToNodeCheck = 0.7501*mMaxEdgeLength;
         // double mDistanceFromNodeTo2ndNodeCheck = sqrt(mMaxEdgeLength*mMaxEdgeLength + mDistanceFromNodeToEdge*mDistanceFromNodeToEdge);
         // double mDistanceFromNodeTo2ndNodeCheck = 0.99*mMaxEdgeLength;
-        double mDistanceFromNodeTo2ndNodeCheck = 0.501*mMaxEdgeLength;
+        double mDistanceFromNodeTo2ndNodeCheck = 0.7501*mMaxEdgeLength;
         // TRACE("Checking Edge Intercepts");
 
         if(true)
@@ -2630,9 +2638,15 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
                                 number_of_boundary_neighbours++;
                             }
                         }
+                        // if(number_of_boundary_neighbours == node_neighbours.size())
                         if(number_of_boundary_neighbours >= 2)
                         {
                             is_boundary = true;
+                        }
+
+                        if(is_boundary==true && containing_element_indices.size()==3 && number_of_boundary_neighbours==(node_neighbours.size()-1))
+                        {
+                            is_boundary = false;
                         }
                     }
 
@@ -2671,6 +2685,14 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         }
     // TRACE("Done");
     // } //While
+
+    // unsigned num_timesteps = SimulationTime::Instance()->GetTimeStepsElapsed();
+    // std::stringstream time;
+    // time << num_timesteps;
+    // PRINT_VARIABLE(time);
+    // VertexMeshWriter<DIM,DIM> vertexmesh_writer("tmp", "4_mesh", false);
+    // vertexmesh_writer.WriteVtkUsingMesh(*p_mesh, time.str());
+
     return ReCheck_Mesh;
 }
 

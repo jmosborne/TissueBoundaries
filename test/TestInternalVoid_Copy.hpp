@@ -43,8 +43,8 @@
 
 #include "GhostNodeRemovalModifier.hpp"
 #include "VoidAreaModifier.hpp"
-#include "VertexBoundaryRefinementModifier.hpp"
-#include "CurvedVertexEdgesModifier.hpp"
+// #include "VertexBoundaryRefinementModifier.hpp"
+#include "FullVertexEdgesModifier.hpp"
 
 #include "AbstractCellBasedWithTimingsTestSuite.hpp" 
 #include "PetscSetupAndFinalize.hpp"
@@ -53,15 +53,12 @@
 
 #include "BoundaryCellWriter.hpp"
 
-#include "CurvedVertexEdgesModifier.hpp"
-#include "SmoothVertexEdgesModifier.hpp"
-#include "JaggedVertexEdgesModifier.hpp"
 /*
  *  This is where you can set parameters to be used in all the simulations.
  */
 
 static const double M_END_STEADY_STATE = 0.5;
-static const double M_END_TIME = 5;
+static const double M_END_TIME = 1;
 static const double M_DT_TIME = 0.001;
 static const double M_SAMPLE_TIME = 10;
 
@@ -203,7 +200,7 @@ public:
      *
      * Default Cutt-off = 1.5
      */
-    void TestNodeBasedDefaultCutoffInternalVoid()
+    void noTestNodeBasedDefaultCutoffInternalVoid()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/DefaultCutOff/Pre-void";
         /* 
@@ -305,7 +302,7 @@ public:
      * == Larger cut-off ==
      * Cut-off = 2.0
      */
-    void TestNodeBasedLargeCutoffInternalVoid()
+    void noTestNodeBasedLargeCutoffInternalVoid()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/LargeCutoff/Pre-void";
         /* 
@@ -408,7 +405,7 @@ public:
      * == Small cut-off ==
      * Cut-off = 1.0
      */
-    void TestNodeBasedSmallCutoffInternalVoid()
+    void noTestNodeBasedSmallCutoffInternalVoid()
     {
         std::string output_directory = M_HEAD_FOLDER + "/Node/SmallCutoff/Pre-void";
         /* 
@@ -516,7 +513,7 @@ public:
     /*
      * == No ghosts == 
      */
-    void TestMeshBasedNoGhostsInternalVoid()
+    void noTestMeshBasedNoGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/NoGhosts/Pre-Void";
 
@@ -632,7 +629,7 @@ public:
     /*
      * == Ghosts ==
      */
-    void TestMeshBasedGhostsInternalVoid()
+    void noTestMeshBasedGhostsInternalVoid()
     {
         std::string output_directory =  M_HEAD_FOLDER + "/Mesh/Ghosts/Pre-Void";
 
@@ -746,7 +743,6 @@ public:
         p_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
         p_mesh->SetHeight(M_PERIODIC_HEIGHT);
         p_mesh->SetWidth(M_PERIODIC_WIDTH);
-        p_mesh->SetCellRearrangementThreshold(0.1);
 
         // Create cells
         std::vector<CellPtr> cells;
@@ -777,7 +773,7 @@ public:
         p_force->SetNagaiHondaDeformationEnergyParameter(50.0);
         p_force->SetNagaiHondaMembraneSurfaceEnergyParameter(1.0);
         p_force->SetNagaiHondaCellCellAdhesionEnergyParameter(1.0);
-        p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(2.0);
+        p_force->SetNagaiHondaCellBoundaryAdhesionEnergyParameter(10.0);
         simulator.AddForce(p_force);
 
         // Add target area modifier
@@ -813,15 +809,10 @@ public:
             CreateHoleInCellPopulation(*p_cell_population_1);
             SmoothVertexMeshEdges(*p_cell_population_1);
 
-            // ((*p_cell_population_1).rGetMesh).SetCellRearrangementThreshold(0.05);
-
             // Track the area of the void
             MAKE_PTR(VoidAreaModifier<2>, voidarea_modifier_1);
             voidarea_modifier_1->SetOutputDirectory(output_directory_1);
             p_simulator_1->AddSimulationModifier(voidarea_modifier_1);
-
-            MAKE_PTR(SmoothVertexEdgesModifier<2>, smooth_edge_modifier);
-            p_simulator_1->AddSimulationModifier(smooth_edge_modifier);
 
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_1->SetDt(M_DT_TIME);
@@ -853,9 +844,6 @@ public:
             voidarea_modifier_2->SetOutputDirectory(output_directory_2);
             p_simulator_2->AddSimulationModifier(voidarea_modifier_2);
 
-            MAKE_PTR(JaggedVertexEdgesModifier<2>, jagged_edge_modifier);
-            p_simulator_2->AddSimulationModifier(jagged_edge_modifier);
-
             // Reset timestep, sampling timestep and end time for simulation and run for a further duration
             p_simulator_2->SetDt(M_DT_TIME);
             p_simulator_2->SetSamplingTimestepMultiple(M_SAMPLE_TIME);
@@ -882,7 +870,7 @@ public:
             // Refine the edges on boundary to get smooth edges
             // MAKE_PTR(VertexBoundaryRefinementModifier<2>, refinement_modifier);
             // p_simulator_2->AddSimulationModifier(refinement_modifier);
-            MAKE_PTR(CurvedVertexEdgesModifier<2>, refinement_modifier);
+            MAKE_PTR(FullVertexEdgesModifier<2>, refinement_modifier);
             p_simulator_2->AddSimulationModifier(refinement_modifier);
 
             // Track the area of the void
