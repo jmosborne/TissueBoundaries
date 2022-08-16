@@ -2495,7 +2495,7 @@ bool JaggedVertexEdgesModifierSimplified<DIM>::CheckForInternalNode(AbstractCell
 }
 
 template<unsigned DIM>
-bool SmoothVertexEdgesModifierSimplified<DIM>::CheckForNodeEdgeInt(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here)
+bool JaggedVertexEdgesModifierSimplified<DIM>::CheckForNodeEdgeInt(AbstractCellPopulation<DIM,DIM>& rCellPopulation, unsigned numb_times_here)
 {
     VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
