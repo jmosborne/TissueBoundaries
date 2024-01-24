@@ -149,13 +149,16 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
             int pixel_tissue_width = (rCellPopulation.rGetMesh().GetWidth(0) - 2)/separation_between_pixels;
             int pixel_tissue_depth = (rCellPopulation.rGetMesh().GetWidth(1) - 2)/separation_between_pixels;
             
-            unsigned pixel_grid[pixel_tissue_width][pixel_tissue_depth];
-
-            int number_of_pixels_with_cell = 0;
-
-            for(unsigned pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
+            unsigned **pixel_grid = new unsigned*[pixel_tissue_depth];
+            for(int i = 0; i < pixel_tissue_depth; ++i) 
             {
-                for(unsigned pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
+                pixel_grid[i] = new unsigned[pixel_tissue_width];
+            }
+
+
+            for(int pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
+            {
+                for(int pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
                 {
                     pixel_grid[pixel_i][pixel_j] = 0;
 
@@ -566,11 +569,11 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
                     {
                         cell_iter->GetCellData()->SetItem("is_boundary", 0.0);
 
-                        for(unsigned pixel_i = 1; pixel_i<pixel_tissue_width-1; pixel_i++)
+                        for(int pixel_i = 1; pixel_i<pixel_tissue_width-1; pixel_i++)
                         {
                             bool break_out_loop = false;
 
-                            for(unsigned pixel_j = 1; pixel_j<pixel_tissue_depth-1; pixel_j++)
+                            for(int pixel_j = 1; pixel_j<pixel_tissue_depth-1; pixel_j++)
                             {
 
                                 if(pixel_grid[pixel_i][pixel_j] == 0)
@@ -699,6 +702,11 @@ void VoidAreaModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<D
                 }
             }
 
+            for(int i = 0; i < pixel_tissue_depth; ++i) 
+            {
+                delete [] pixel_grid[i];
+            }
+            delete [] pixel_grid;
         }
         *locationFile_3 << "\n";
         locationFile_3->close();

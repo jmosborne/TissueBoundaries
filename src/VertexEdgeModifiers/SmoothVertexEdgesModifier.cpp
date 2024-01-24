@@ -384,7 +384,7 @@ void SmoothVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
 
                             if(containing_element_indices_1.size() >= 2 && containing_element_indices_2.size() >= 2 && shared_elements.size() >= 2)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                                // Node<DIM>* p_node = p_mesh->GetNode(node_index);
 
                                 std::set<unsigned>::const_iterator elem_it = containing_element_indices.begin();
 

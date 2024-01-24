@@ -1976,8 +1976,8 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         double distanceToEdgeThreshold = 0.03;
 
         // double mMaxEdgeLength_1 = 0.1005;
-        double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength;
-        double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength;
+        // double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength;
+        // double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength;
         // TRACE("Checking Node Merges");
         if(true)
         {
@@ -2203,7 +2203,7 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
 
                             if(containing_element_indices_1.size() >= 2 && containing_element_indices_2.size() >= 2 && shared_elements.size() >= 2)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                                // Node<DIM>* p_node = p_mesh->GetNode(node_index);
                                 // PRINT_VECTOR(p_node->rGetLocation())
                                 // PRINT_VARIABLE(p_node->IsBoundaryNode());
 
@@ -2315,7 +2315,7 @@ bool CurvedVertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>
         // Void removal
         // TRACE("Checking For Voids");
 
-        double mVoidAreaThreshold = 0.01;
+        // double mVoidAreaThreshold = 0.01;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();

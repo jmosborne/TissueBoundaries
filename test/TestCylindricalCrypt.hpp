@@ -163,7 +163,7 @@ public:
 
                     // Create a simple mesh
                     HoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0);
-                    TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+                    boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
                     double cut_off_length = interaction_radi[interation_index];
 
@@ -252,9 +252,6 @@ public:
                     // Extra Gubbins to get to loop: this is usually done by the SetUp and TearDown methods
                     SimulationTime::Instance()->Destroy();
                     SimulationTime::Instance()->SetStartTime(0.0);
-
-                    // Clear memory
-                    delete p_mesh;
                 }
             }
             /*
@@ -269,7 +266,7 @@ public:
 
                 // Create mesh (no ghosts)
                 CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0); // No Ghosts
-                Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
+                boost::shared_ptr<Cylindrical2dMesh> p_mesh = generator.GetCylindricalMesh();
 
                 /////// Change the halo parameters so still get longer edges.  //////
                 p_mesh->SetHaloScalingFactor(0.5);
@@ -367,7 +364,7 @@ public:
                 // Create mesh (no ghosts)
                 CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, 0); // No Ghosts
 
-                Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
+                boost::shared_ptr<Cylindrical2dMesh> p_mesh = generator.GetCylindricalMesh();
 
                 // Create cells
                 std::vector<CellPtr> cells;
@@ -469,7 +466,7 @@ public:
                 unsigned thickness_of_ghost_layer = 2;
 
                 CylindricalHoneycombMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, thickness_of_ghost_layer);
-                Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
+                boost::shared_ptr<Cylindrical2dMesh> p_mesh = generator.GetCylindricalMesh();
 
                 // Get location indices corresponding to real cells
                 std::vector<unsigned> location_indices = generator.GetCellLocationIndices();
@@ -566,7 +563,7 @@ public:
                 // Create mesh
                 bool is_flat_bottom = true; // only different here with jagged is this.
                 CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, is_flat_bottom);
-                Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
+                boost::shared_ptr<Cylindrical2dVertexMesh> p_mesh = generator.GetCylindricalMesh();
                 p_mesh->SetCellRearrangementThreshold(0.1);
                 p_mesh->SetCellRearrangementRatio(1.5);
 
@@ -673,7 +670,7 @@ public:
                 // Create mesh
                 bool is_flat_bottom = false; // only different here with smoothed is this.
                 CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, is_flat_bottom);
-                Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
+                boost::shared_ptr<Cylindrical2dVertexMesh> p_mesh = generator.GetCylindricalMesh();
                 p_mesh->SetCellRearrangementThreshold(0.05);
                 p_mesh->SetCellRearrangementRatio(1.5);
 
@@ -774,7 +771,7 @@ public:
 
                 // Create mesh
                 CylindricalHoneycombVertexMeshGenerator generator(M_CRYPT_DIAMETER, M_CRYPT_LENGTH, false);
-                Cylindrical2dVertexMesh* p_mesh = generator.GetCylindricalMesh();
+                boost::shared_ptr<Cylindrical2dVertexMesh> p_mesh = generator.GetCylindricalMesh();
                 p_mesh->SetCellRearrangementThreshold(0.05);
                 p_mesh->SetCellRearrangementRatio(1.5);
                 

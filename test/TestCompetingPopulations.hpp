@@ -144,7 +144,6 @@ private:
                 // Get the coordinates of this cell centre
                 c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
                 double x = centre_of_cell[0];
-                double y = centre_of_cell[1];
                 unsigned location_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
  
                 // if ((fabs(y-x)>M_DOMAINWIDTH) && (x<M_DOMAIN_X_MIN) && (x>M_DOMAIN_X_MAX) && (y<M_DOMAIN_Y_MIN) && (y>M_DOMAIN_Y_MAX))
@@ -179,8 +178,6 @@ private:
                 // Get the coordinates of this cell centre
                 c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
                 double x = centre_of_cell[0];
-                double y = centre_of_cell[1];
-
 
                 // Use circles
                 // if(pow(x-x1,2) + pow(y-y1,2) < pow(2.0,2))
@@ -239,8 +236,7 @@ private:
             // Get the coordinates of this cell centre
             c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
             double x = centre_of_cell[0];
-            double y = centre_of_cell[1];
-
+            
             // Use circles
             // if(pow(x-x1,2) + pow(y-y1,2) < pow(2.0,2))
             // {
@@ -301,12 +297,12 @@ private:
 
 public:
 
-    void xTestMeshGhostsTwoPopulations() throw (Exception)
+    void xTestMeshGhostsTwoPopulations()
     {
         // Create a simple 2D MutableVertexMesh
         unsigned thickness_of_ghost_layer = 4;
         HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH, thickness_of_ghost_layer);
-        MutableMesh<2,2>* p_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_mesh = generator.GetMesh();
 
         std::vector<unsigned> location_indices = generator.GetCellLocationIndices();
 
@@ -390,11 +386,11 @@ public:
 
     }
 
-    void xTestMeshFiniteTwoPopulations() throw (Exception)
+    void xTestMeshFiniteTwoPopulations()
     {
         // Create a simple 2D MutableVertexMesh
         HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH, 0);
-        MutableMesh<2,2>* p_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_mesh = generator.GetMesh();
 
         std::vector<CellPtr> cells;
         GenerateCells(p_mesh->GetNumNodes(), cells, sqrt(3.0)/2.0,M_CONTACT_INHIBITION_LEVEL,
@@ -474,11 +470,11 @@ public:
 
     }
 
-    void xTestMeshDefaultTwoPopulations() throw (Exception)
+    void xTestMeshDefaultTwoPopulations()
     {
         // Create a simple 2D MutableVertexMesh
         HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH, 0);
-        MutableMesh<2,2>* p_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_mesh = generator.GetMesh();
 
         std::vector<CellPtr> cells;
         
@@ -556,11 +552,11 @@ public:
 
     }
     
-    void xTestNodeDefaultTwoPopulations() throw (Exception)
+    void xTestNodeDefaultTwoPopulations() 
     {
         // Create a simple 2D MutableVertexMesh
         HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
-        MutableMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
         // Slows things down but can use a larger timestep and diffusion forces
 
@@ -638,11 +634,11 @@ public:
         
     }
 
-    void xTestNodeSmallTwoPopulations() throw (Exception)
+    void xTestNodeSmallTwoPopulations() 
     {
         // Create a simple 2D MutableVertexMesh
         HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
-        MutableMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
         // Slows things down but can use a larger timestep and diffusion forces
         //p_mesh->SetCheckForInternalIntersections(true);
@@ -724,11 +720,11 @@ public:
 
     }
 
-    void xTestNodeLargeTwoPopulations() throw (Exception)
+    void xTestNodeLargeTwoPopulations() 
     {
         // Create a simple 2D MutableVertexMesh
         HoneycombMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
-        MutableMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
         // Slows things down but can use a larger timestep and diffusion forces
         //p_mesh->SetCheckForInternalIntersections(true);
@@ -810,14 +806,14 @@ public:
 
     }
 
-    void xTestVertexDefaultTwoPopulations() throw (Exception)
+    void xTestVertexDefaultTwoPopulations() 
     {
         RandomNumberGenerator* p_gen = RandomNumberGenerator::Instance();
         p_gen->Reseed(0);
 
         // Create a simple 2D MutableVertexMesh
         HoneycombVertexMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
-        MutableVertexMesh<2,2>* p_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableVertexMesh<2, 2> > p_mesh = generator.GetMesh();
 
         p_mesh->SetCellRearrangementThreshold(0.1);
 
@@ -917,7 +913,7 @@ public:
 
     }
 
-    void TestVertexSmoothTwoPopulations() throw (Exception)
+    void TestVertexSmoothTwoPopulations() 
     {
         RandomNumberGenerator* p_gen = RandomNumberGenerator::Instance();
 
@@ -926,7 +922,7 @@ public:
 
         // Create a simple 2D MutableVertexMesh
         HoneycombVertexMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
-        MutableVertexMesh<2,2>* p_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableVertexMesh<2, 2> > p_mesh = generator.GetMesh();
 
         p_mesh->SetCellRearrangementThreshold(0.15);
         // Slows things down but can use a larger timestep and diffusion forces
@@ -1023,7 +1019,7 @@ public:
 
     }
 
-    void xTestVertexCurvedTwoPopulations() throw (Exception)
+    void xTestVertexCurvedTwoPopulations() 
     {
         RandomNumberGenerator* p_gen = RandomNumberGenerator::Instance();
 
@@ -1032,7 +1028,7 @@ public:
 
         // Create a simple 2D MutableVertexMesh
         HoneycombVertexMeshGenerator generator(M_INITIAL_WIDTH, M_INITIAL_LENGTH);
-        MutableVertexMesh<2,2>* p_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableVertexMesh<2, 2> > p_mesh = generator.GetMesh();
 
         p_mesh->SetCellRearrangementThreshold(0.01);
         // p_mesh->Scale(0.95,0.95);

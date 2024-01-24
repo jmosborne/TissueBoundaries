@@ -211,7 +211,7 @@ public:
          */
          // Create simple mesh
         HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, 0);
-        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
         p_generating_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
 
         double cut_off_length = 1.5; //this is the default
@@ -313,7 +313,7 @@ public:
          */
          // Create simple mesh
         HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, 0);
-        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
         p_generating_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
 
         double cut_off_length = 2.0; //this is the default
@@ -416,7 +416,7 @@ public:
          */
          // Create simple mesh
         HoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, 0);
-        TetrahedralMesh<2,2>* p_generating_mesh = generator.GetMesh();
+        boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
         p_generating_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
 
         double cut_off_length = 1.0; //this is the default
@@ -522,7 +522,7 @@ public:
 
         // Create mesh
         ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
-        Toroidal2dMesh* p_mesh = generator.GetToroidalMesh();
+        boost::shared_ptr<Toroidal2dMesh> p_mesh = generator.GetToroidalMesh();
 
         // Create cells
         std::vector<CellPtr> cells;
@@ -638,7 +638,7 @@ public:
 
         // Create mesh
         ToroidalHoneycombMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH, M_DOMAIN_SCALING, M_DOMAIN_SCALING);
-        Toroidal2dMesh* p_mesh = generator.GetToroidalMesh();
+        boost::shared_ptr<Toroidal2dMesh> p_mesh = generator.GetToroidalMesh();
 
         // Create cells
         std::vector<CellPtr> cells;
@@ -742,7 +742,7 @@ public:
          */
          // Create mesh
         ToroidalHoneycombVertexMeshGenerator generator(M_DOMAIN_WIDTH, M_DOMAIN_LENGTH);
-        Toroidal2dVertexMesh* p_mesh = generator.GetToroidalMesh();
+        boost::shared_ptr<Toroidal2dVertexMesh> p_mesh = generator.GetToroidalMesh();
         p_mesh->Scale(M_DOMAIN_SCALING, M_DOMAIN_SCALING);
         p_mesh->SetHeight(M_PERIODIC_HEIGHT);
         p_mesh->SetWidth(M_PERIODIC_WIDTH);

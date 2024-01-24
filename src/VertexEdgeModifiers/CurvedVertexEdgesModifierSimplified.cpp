@@ -72,13 +72,13 @@ void CurvedVertexEdgesModifierSimplified<DIM>::UpdateAtEndOfTimeStep(AbstractCel
     bool recheck_int_nodes = true;
     bool recheck_node_edge = true;
     bool recheck_hack = true;
-    bool recheck_freemesh = true;
+    //bool recheck_freemesh = true;
     int how_many_times_here = 0;
     while(recheck_hack || recheck_mesh || recheck_edges || recheck_voids || recheck_node_labels || recheck_int_nodes || recheck_node_edge)
     {   
         // how_many_times_here = 0;
-        VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
-        MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
+        // VertexBasedCellPopulation<DIM>* p_cell_population = static_cast<VertexBasedCellPopulation<DIM>*>(&rCellPopulation);
+        // MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
 
         
         std::stringstream t_numb_times_here;
@@ -105,7 +105,7 @@ void CurvedVertexEdgesModifierSimplified<DIM>::UpdateAtEndOfTimeStep(AbstractCel
         // TRACE("Internal node - edge pairs");
         recheck_node_labels = CleanUpRogueNodes(rCellPopulation,how_many_times_here);
 
-        recheck_freemesh = RemoveFreeBoundedNode(rCellPopulation,how_many_times_here);
+        // recheck_freemesh = RemoveFreeBoundedNode(rCellPopulation,how_many_times_here);
         // TRACE("checked free bounded nodes");
         recheck_node_labels = CleanUpRogueNodes(rCellPopulation,how_many_times_here);
        
@@ -276,13 +276,14 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::Remove3NodeVoid(bool performed_ed
                 *         -----o  (v)  o-----
                 */
                 // Decide whether the last merged node will be a boundary node or not...  CBFed right now...
-                bool is_boundary = false;
+                
+                // bool is_boundary = false;
                 // Check the neighbours of A that are not B or C and check whether any of those are boundary nodes.
                 // If they are a boundary node, then the merged void will be a boundary node. Otherwise, not!
                                         
-                unsigned node_A_index = p_node->GetIndex();
-                unsigned node_B_index = p_boundary_1->GetIndex();
-                unsigned node_C_index = p_boundary_2->GetIndex();
+                // unsigned node_A_index = p_node->GetIndex();
+                // unsigned node_B_index = p_boundary_1->GetIndex();
+                // unsigned node_C_index = p_boundary_2->GetIndex();
 
                 // Check As neighbours
                 // std::set<unsigned> first_neighbour_indices = p_node->rGetContainingElementIndices();
@@ -1014,7 +1015,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::ClearFreeInternalNodes(AbstractCe
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
 
     bool ReCheck_Mesh = false;
-    bool performed_edge_modifier = false;
+    //bool performed_edge_modifier = false;
     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter_1 = p_mesh->GetNodeIteratorBegin();
         node_iter_1 != p_mesh->GetNodeIteratorEnd();
         ++node_iter_1)
@@ -1051,7 +1052,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::ClearFreeInternalNodes(AbstractCe
             {
                 Node<DIM>* p_merge_node = p_mesh->GetNode(node_to_merge);
                 p_mesh->PerformNodeMerge(p_merge_node,p_node);
-                performed_edge_modifier = true;
+                //performed_edge_modifier = true;
                 break;
             }
             
@@ -1077,7 +1078,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::DirtyHack(AbstractCellPopulation<
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
 
     bool ReCheck_Mesh = false;
-    bool performed_edge_modifier = false;
+    //bool performed_edge_modifier = false;
     double distanceBetweenVerteciesThreshold = 1.25*p_mesh->GetCellRearrangementThreshold();
     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter_1 = p_mesh->GetNodeIteratorBegin();
         node_iter_1 != p_mesh->GetNodeIteratorEnd();
@@ -1099,7 +1100,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::DirtyHack(AbstractCellPopulation<
                     {
                         
                         p_mesh->PerformNodeMerge(p_node_1,p_node_2);
-                        performed_edge_modifier = true;
+                        //performed_edge_modifier = true;
                         break;
                     }
                 }
@@ -1252,7 +1253,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::CheckForVConfig(AbstractCellPopul
                             
                             Node<DIM>* p_neighbour_1 = p_mesh->GetNode(free_boundary_neighbours[0]);
                             Node<DIM>* p_neighbour_2 = p_mesh->GetNode(free_boundary_neighbours[1]);
-                            Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                            //Node<DIM>* p_node = p_mesh->GetNode(node_index);
 
                             c_vector<double, DIM> r_neighbour_1 = p_neighbour_1->rGetLocation();
                             c_vector<double, DIM> r_neighbour_2 = p_neighbour_2->rGetLocation();
@@ -1379,9 +1380,9 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::CheckFor3NodeVoids(AbstractCellPo
 
     bool performed_edge_modifier = false;
     
-    unsigned node_to_print = 0;
+    // unsigned node_to_print = 0;
 
-    double mVoidAreaThreshold = 0.05;
+    // double mVoidAreaThreshold = 0.05;
     for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
         node_iter != p_mesh->GetNodeIteratorEnd();
         ++node_iter)
@@ -1503,7 +1504,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::CheckFor3NodeVoids(AbstractCellPo
                                     // PRINT_VARIABLE(p_neighbour_node_2->IsBoundaryNode());
                                     // PRINT_VECTOR(p_neighbour_node_2->rGetLocation());
                                     // PRINT_VARIABLE(node_neighbour_2);
-                                    node_to_print = node_neighbour_2;
+                                    // node_to_print = node_neighbour_2;
                                     p_neighbour_node_2->SetAsBoundaryNode(true);
                                 }
                                 break;
@@ -1952,7 +1953,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::CheckForInternalNode(AbstractCell
 
                             if(containing_element_indices_1.size() >= 2 && containing_element_indices_2.size() >= 2 && shared_elements.size() >= 2)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                                // Node<DIM>* p_node = p_mesh->GetNode(node_index);
                                 // PRINT_VECTOR(p_node->rGetLocation())
                                 // PRINT_VARIABLE(p_node->IsBoundaryNode());
 
@@ -4349,8 +4350,8 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::SmoothEdges(AbstractCellPopulatio
         double distanceToEdgeThreshold = 0.05;
 
         // double mMaxEdgeLength_1 = 0.1005;
-        double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength;
-        double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength;
+        // double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength;
+        // double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength;
         // TRACE("Checking Node Merges");
         if(true)
         {
@@ -4576,7 +4577,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::SmoothEdges(AbstractCellPopulatio
 
                             if(containing_element_indices_1.size() >= 2 && containing_element_indices_2.size() >= 2 && shared_elements.size() >= 2)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                                // Node<DIM>* p_node = p_mesh->GetNode(node_index);
                                 // PRINT_VECTOR(p_node->rGetLocation())
                                 // PRINT_VARIABLE(p_node->IsBoundaryNode());
 
@@ -4688,7 +4689,7 @@ bool CurvedVertexEdgesModifierSimplified<DIM>::SmoothEdges(AbstractCellPopulatio
         // Void removal
         // TRACE("Checking For Voids");
 
-        double mVoidAreaThreshold = 0.01;
+        // double mVoidAreaThreshold = 0.01;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();

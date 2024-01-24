@@ -127,8 +127,7 @@ private:
             {
                 // Get the coordinates of this cell centre
                 c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
-                double x = centre_of_cell[0];
-                double y = centre_of_cell[1];
+
                 unsigned location_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
  
                 // if ((fabs(y-x)>M_DOMAINWIDTH) && (x<M_DOMAIN_X_MIN) && (x>M_DOMAIN_X_MAX) && (y<M_DOMAIN_Y_MIN) && (y>M_DOMAIN_Y_MAX))
@@ -159,8 +158,6 @@ private:
             {
                 // Get the coordinates of this cell centre
                 c_vector<double, 2> centre_of_cell = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
-                double x = centre_of_cell[0];
-                double y = centre_of_cell[1];
 
                 // if ((fabs(y-x)>M_DOMAINWIDTH) && (x<M_DOMAIN_X_MIN) && (x>M_DOMAIN_X_MAX) && (y<M_DOMAIN_Y_MIN) && (y>M_DOMAIN_Y_MAX))
                 if ( norm_2(centre_of_cell) > M_DOMAIN_WIDTH)
@@ -266,7 +263,7 @@ public:
                 */
                 // Create a simple mesh
                 HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH,0);
-                MutableMesh<2,2>* p_generating_mesh = generator.GetMesh();
+                boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
                 p_generating_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH);
 
@@ -344,7 +341,7 @@ public:
 
                 // Create a simple mesh
                 HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH,0);
-                MutableMesh<2,2>* p_generating_mesh = generator.GetMesh();
+                boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
                 p_generating_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH);
 
@@ -419,7 +416,7 @@ public:
 
                 // Create a simple mesh
                 HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH,0);
-                MutableMesh<2,2>* p_generating_mesh = generator.GetMesh();
+                boost::shared_ptr<MutableMesh<2, 2> > p_generating_mesh = generator.GetMesh();
 
                 p_generating_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH);
 
@@ -501,7 +498,7 @@ public:
 
                 unsigned thickness_of_ghost_layer = 8;
                 HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH, thickness_of_ghost_layer);
-                MutableMesh<2,2>* p_mesh = generator.GetMesh();
+                boost::shared_ptr<MutableMesh<2, 2> > p_mesh = generator.GetMesh();
 
                 p_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH);
 
@@ -578,7 +575,7 @@ public:
                 std::string output_directory = M_HEAD_FOLDER + "/Mesh/NoGhosts/Infinite/Run_" +  out.str();
 
                 HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH, 0);
-                MutableMesh<2,2>* p_mesh = generator.GetMesh();
+                boost::shared_ptr<MutableMesh<2, 2> > p_mesh = generator.GetMesh();
 
                 p_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH);
 
@@ -650,7 +647,7 @@ public:
 
                 
                 HoneycombMeshGenerator generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH);
-                MutableMesh<2,2>* p_mesh = generator.GetMesh();
+                boost::shared_ptr<MutableMesh<2, 2> > p_mesh = generator.GetMesh();
 
                 p_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH);
 
@@ -725,7 +722,7 @@ public:
                 */
                 // Create cells
                 HoneycombVertexMeshGenerator mesh_generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH);
-                MutableVertexMesh<2,2>* p_mesh = mesh_generator.GetMesh();
+                boost::shared_ptr<MutableVertexMesh<2, 2> > p_mesh = mesh_generator.GetMesh();
                 // p_mesh->SetCellRearrangementThreshold(0.1);
 
                 p_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH+0.25);
@@ -801,7 +798,7 @@ public:
 
                 // Create cells
                 HoneycombVertexMeshGenerator mesh_generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH);
-                MutableVertexMesh<2,2>* p_mesh = mesh_generator.GetMesh();
+                boost::shared_ptr<MutableVertexMesh<2, 2> > p_mesh = mesh_generator.GetMesh();
                 // p_mesh->SetCellRearrangementThreshold(0.1);
 
                 p_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH+0.25);
@@ -884,7 +881,7 @@ public:
                 
                 // Create cells
                 HoneycombVertexMeshGenerator mesh_generator(2.0*M_INITIAL_WIDTH, 3.0*M_INITIAL_LENGTH);
-                MutableVertexMesh<2,2>* p_mesh = mesh_generator.GetMesh();
+                boost::shared_ptr<MutableVertexMesh<2, 2> > p_mesh = mesh_generator.GetMesh();
                 // p_mesh->SetCellRearrangementThreshold(0.1);
 
                 p_mesh->Translate(-M_INITIAL_WIDTH,-0.75*sqrt(3.0)*M_INITIAL_LENGTH+0.25);

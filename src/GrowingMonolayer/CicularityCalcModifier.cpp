@@ -251,7 +251,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
                 double pixel_radial_reach = 0.5*mCutoff;
                 double separation_between_pixels = mPixelSeparation;
-                double area_of_pixel = separation_between_pixels*separation_between_pixels;
+                // double area_of_pixel = separation_between_pixels*separation_between_pixels;
 
                 // minus 2 is to ensure we are in the tissue and not detecting gaps due to periodicity from each side
                 double x_max = rCellPopulation.rGetMesh().GetWidth(0);
@@ -262,20 +262,17 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
                 // PRINT_2_VARIABLES(pixel_tissue_width,pixel_tissue_depth);
 
-                unsigned pixel_grid[pixel_tissue_width][pixel_tissue_depth];
-                // for(unsigned pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
-                // {
-                //     for(unsigned pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
-                //     {
-                //         pixel_grid[pixel_i][pixel_j] = 0.0;
-                //     }
-                // }
-
-                int number_of_pixels_with_cell = 0;
-                // Calculate the area of the tissue
-                for(unsigned pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
+                unsigned **pixel_grid = new unsigned*[pixel_tissue_depth];
+                for(int i = 0; i < pixel_tissue_depth; ++i) 
                 {
-                    for(unsigned pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
+                    pixel_grid[i] = new unsigned[pixel_tissue_width];
+                }
+
+                // int number_of_pixels_with_cell = 0;
+                // Calculate the area of the tissue
+                for(int pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
+                {
+                    for(int pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
                     {
                         pixel_grid[pixel_i][pixel_j] = 0;
 
@@ -309,11 +306,11 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                     cell_iter->GetCellData()->SetItem("is_boundary", 0.0);
                     number_cells++;
 
-                    for(unsigned pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
+                    for(int pixel_i = 0; pixel_i<pixel_tissue_width; pixel_i++)
                     {
                         bool break_out_loop = false;
 
-                        for(unsigned pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
+                        for(int pixel_j = 0; pixel_j<pixel_tissue_depth; pixel_j++)
                         {
                             double pixel_x_coordinate = -1.0 - x_max + pixel_i*separation_between_pixels;
                             double pixel_y_coordinate = -1.0 - y_max + pixel_j*separation_between_pixels;
@@ -352,6 +349,11 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                     }
                 }
 
+                for(int i = 0; i < pixel_tissue_depth; ++i) 
+                {
+                    delete [] pixel_grid[i];
+                }
+                delete [] pixel_grid;
             }
 
 
@@ -370,10 +372,10 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
             x_centre = x_centre/number_of_boundary_cells;
             y_centre = y_centre/number_of_boundary_cells;
 
-			double x_boundary_c[number_of_boundary_cells];
-			double y_boundary_c[number_of_boundary_cells];
-            double theta_coordinates[number_of_boundary_cells];
-            unsigned ordered_set[number_of_boundary_cells];
+			double *x_boundary_c = new double[number_of_boundary_cells];
+			double *y_boundary_c = new double[number_of_boundary_cells];
+            double *theta_coordinates = new double[number_of_boundary_cells];
+            unsigned *ordered_set = new unsigned[number_of_boundary_cells];
 
 
             for(unsigned i=0; i<number_of_boundary_cells; i++)
@@ -406,7 +408,7 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
 
             }
 
-            bool flag_is_in[number_of_boundary_cells];
+            bool *flag_is_in = new bool[number_of_boundary_cells];
             for(unsigned i=0; i<number_of_boundary_cells; i++)
             {
                 flag_is_in[i] = false;
@@ -464,6 +466,11 @@ void CicularityCalcModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopula
                 tissue_perimiter = tissue_perimiter + sqrt(pow(xii-xjj,2) + pow(yii-yjj,2));
 
             }
+            delete[] x_boundary_c;
+			delete[] y_boundary_c;
+            delete[] theta_coordinates;
+            delete[] ordered_set;
+            delete[] flag_is_in;
 
         }
 

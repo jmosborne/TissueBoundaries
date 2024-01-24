@@ -183,9 +183,8 @@ void TwoPopulationLineModifyer<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPop
                     iter != containing_elem_indices.end();
                     ++iter)
                 {
-                    // Get this element, its index and its number of nodes
+                    // Get this element, and its number of nodes
                     VertexElement<DIM, DIM>* p_element = p_cell_population->GetElement(*iter);
-                    unsigned elem_index = p_element->GetIndex();
                     unsigned num_nodes_elem = p_element->GetNumNodes();
 
                     // Find the local index of this node in this element
