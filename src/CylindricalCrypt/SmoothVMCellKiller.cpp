@@ -59,7 +59,6 @@ void SmoothVMCellKiller<DIM>::CheckAndLabelCellsForApoptosisOrDeath()
             node_iter != p_mesh->GetNodeIteratorEnd();
             ++node_iter)
         {
-            unsigned node_index = node_iter->GetIndex();
             std::set<unsigned> containing_element_indices = node_iter->rGetContainingElementIndices();
             for (std::set<unsigned>::iterator element_iter = containing_element_indices.begin();
                 element_iter != containing_element_indices.end();

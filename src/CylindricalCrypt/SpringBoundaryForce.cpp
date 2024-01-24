@@ -30,7 +30,6 @@ double SpringBoundaryForce<DIM>::GetMinimumYValue()
 template<unsigned DIM>
 void SpringBoundaryForce<DIM>::AddForceContribution(AbstractCellPopulation<DIM>& rCellPopulation)
 {
-    double dt = SimulationTime::Instance()->GetTimeStep();
     double turn_on_spring_distance = mMinYvalue + 1.0;
 
     //  (dynamic_cast<AbstractCentreBasedCellPopulation<ELEMENT_DIM,SPACE_DIM>*>(this->mpCellPopulation))

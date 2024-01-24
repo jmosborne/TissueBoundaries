@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2021, University of Oxford.
+# Copyright (c) 2005-2024, University of Oxford.
 # All rights reserved.
 # 
 # University of Oxford means the Chancellor, Masters and Scholars of the
@@ -34,4 +34,4 @@
 
 # This allows us to build tests of the project.
 # Simply set the project name in the line below.
-chaste_do_test_project(template_project)
+chaste_do_test_project(TissueBoundaries)

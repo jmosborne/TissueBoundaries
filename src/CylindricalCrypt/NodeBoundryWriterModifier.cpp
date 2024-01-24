@@ -90,7 +90,6 @@ void NodeBoundryWriterModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPop
     
     // mesh_writer.SetParallelFiles(*p_mesh);
 
-    auto num_real_nodes = p_mesh->GetNumNodes();
     auto num_nodes = p_cylindrical_mesh->GetNumAllNodes();
 
     // PRINT_VARIABLE(num_nodes);

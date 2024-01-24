@@ -743,7 +743,6 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
     MutableVertexMesh<DIM,DIM>* p_mesh = static_cast<MutableVertexMesh<DIM,DIM>*>(&(p_cell_population->rGetMesh()));
     
     bool ReCheck_Mesh = true;
-    unsigned numb_times_here = 0;
     while(ReCheck_Mesh)
     {
         ReCheck_Mesh = false;
@@ -1748,8 +1747,8 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
         double distanceToEdgeThreshold = 0.03;
 
         double mMaxEdgeLength_1 = 0.1005;
-        double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength_1;
-        double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength_1;
+        // double mDistanceFromNodeToNodeCheck_1 = 0.5*mMaxEdgeLength_1;
+        // double mDistanceFromNodeTo2ndNodeCheck_1 = 0.5*mMaxEdgeLength_1;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
@@ -1973,7 +1972,7 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
 
                             if(containing_element_indices_1.size() >= 2 && containing_element_indices_2.size() >= 2 && shared_elements.size() >= 2)
                             {
-                                Node<DIM>* p_node = p_mesh->GetNode(node_index);
+                                // Node<DIM>* p_node = p_mesh->GetNode(node_index);
                                 // PRINT_VECTOR(p_node->rGetLocation())
                                 // PRINT_VARIABLE(p_node->IsBoundaryNode());
 
@@ -2083,7 +2082,6 @@ void VertexEdgesModifier<DIM>::SmoothEdges(AbstractCellPopulation<DIM,DIM>& rCel
         bool performed_edge_modifier_2 = false;
 
         // Void removal
-        double mVoidAreaThreshold = 0.01;
         if(true)
         {
             for (typename VertexMesh<DIM,DIM>::NodeIterator node_iter = p_mesh->GetNodeIteratorBegin();
