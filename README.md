@@ -1,3 +1,5 @@
+# TissueBoundaries
+
 ## Code for D.P.J. Germano, A. Zanca, S.T. Johnston, J.A. Flegg & J.M. Osborne  "Free and Interfacial Boundaries in Individual-Based Models of Multicellular Biological systems"  https://doi.org/10.1007/s11538-023-01214-8
 
 Published in the Buletin of Mathematical Biology in 2023. 
